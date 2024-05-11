@@ -150,10 +150,36 @@ pub fn get_pawn_moves(
     moves
 }
 
+pub fn get_king_moves(position: &Position, friendly_positions: &Vec<Position>) -> Vec<Position> {
+    let mut moves: Vec<Position> = Vec::new();
+    let (x, y) = position.get_x_y_as_int();
+
+    let possible_moves = [
+        Position::get_valid_position(x, y + 1),
+        Position::get_valid_position(x, y - 1),
+        Position::get_valid_position(x + 1, y),
+        Position::get_valid_position(x - 1, y),
+        Position::get_valid_position(x + 1, y + 1),
+        Position::get_valid_position(x + 1, y - 1),
+        Position::get_valid_position(x - 1, y + 1),
+        Position::get_valid_position(x - 1, y - 1),
+    ];
+
+    for possible_move in possible_moves {
+        if let Some(position) = possible_move {
+            if !friendly_positions.contains(&position) {
+                moves.push(position);
+            }
+        }
+    }
+
+    moves
+}
+
 
 #[cfg(test)]
 mod test_moves {
-    use crate::moves::{get_knight_moves, get_straight_moves, get_pawn_moves};
+    use crate::moves::{get_knight_moves, get_straight_moves, get_pawn_moves, get_king_moves};
     use crate::helpers::{Direction, Position};
 
     #[test]
@@ -303,6 +329,26 @@ mod test_moves {
             &Some(Position::new(0, 2)),
         );
         let expected_output: Vec<Position> = vec![Position::new(1, 2), Position::new(1, 3), Position::new(0, 2)];
+        assert_eq!(expected_output, output);
+    }
+
+    #[test]
+    fn test_get_king_moves() {
+        let position = Position::new(4, 4);
+        let expected_output = vec![
+            Position::new(4, 3),
+            Position::new(5, 4),
+            Position::new(3, 4),
+            Position::new(5, 5),
+            Position::new(5, 3),
+            Position::new(3, 5),
+        ];
+
+        let output = get_king_moves(
+            &position,
+            &vec![Position::new(1, 2), Position::new(4, 5), Position::new(3, 3)]
+        );
+
         assert_eq!(expected_output, output);
     }
 
