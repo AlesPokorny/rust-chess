@@ -2,9 +2,6 @@ use crate::helpers::Position;
 use crate::pieces::{Color, Piece, PieceKind};
 use crate::utils::chess_coord_to_array_coord;
 
-use eframe::egui;
-use image::io::Reader as ImageReader;
-
 #[derive(Clone, Copy, Debug)]
 pub struct Board {
     pub board: [[Option<Piece>; 8]; 8],

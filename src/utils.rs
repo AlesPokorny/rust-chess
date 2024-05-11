@@ -13,6 +13,7 @@ pub fn chess_coord_to_array_coord(coord: String) -> Option<Position> {
     Position::get_valid_position(col, row)
 }
 
+#[allow(dead_code)]
 pub fn get_user_input(message: &str) -> Option<Position> {
     println!("{}", message);
     let mut from_input = String::new();
@@ -21,17 +22,6 @@ pub fn get_user_input(message: &str) -> Option<Position> {
         .expect("Failed to read line");
 
     chess_coord_to_array_coord(from_input)
-}
-
-pub fn change_turn(mut turn: Color) -> Color {
-    if turn == Color::White {
-        turn = Color::Black;
-        println!("--- Black turn ---")
-    } else {
-        turn = Color::White;
-        println!("--- White turn ---");
-    }
-    turn
 }
 
 pub fn get_en_passant(

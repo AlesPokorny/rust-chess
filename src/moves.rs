@@ -237,7 +237,7 @@ pub fn is_king_in_check(
         .iter()
         .map(|positions_in_direction| positions_in_direction.last().unwrap());
     for last_rook_move in last_rook_moves {
-        if let Some(piece) = board.get_piece_from_position(&last_rook_move) {
+        if let Some(piece) = board.get_piece_from_position(last_rook_move) {
             if (piece.color != king_color)
                 & ((piece.kind == PieceKind::R) | (piece.kind == PieceKind::Q))
             {
@@ -257,7 +257,7 @@ pub fn is_king_in_check(
         .iter()
         .map(|positions_in_direction| positions_in_direction.last().unwrap());
     for last_bishop_move in last_bishop_moves {
-        if let Some(piece) = board.get_piece_from_position(&last_bishop_move) {
+        if let Some(piece) = board.get_piece_from_position(last_bishop_move) {
             if (piece.color != king_color)
                 & ((piece.kind == PieceKind::B) | (piece.kind == PieceKind::Q))
             {
@@ -296,7 +296,7 @@ pub fn filter_check_moves(
     let mut filtered_moves: Vec<Position> = Vec::new();
 
     for to_position in to_positions {
-        let mut temp_board = board.clone();
+        let mut temp_board = *board;
         let moved_piece = temp_board.get_piece_from_position(&from_position).unwrap();
         // moved_piece.move_piece(to_position);
         temp_board.move_piece(&from_position, &to_position);

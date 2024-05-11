@@ -1,39 +1,39 @@
 use crate::board::Board;
-use crate::helpers::Position;
-use crate::pieces::{Color, PieceKind};
 use crate::gui::utils::*;
+use crate::helpers::Position;
+use crate::pieces::{Color, Piece, PieceKind};
 
-use eframe::egui::{CentralPanel, Context, Image, Pos2, Color32, Shape, Rect, Rounding, Vec2, PointerState};
+use crate::utils::{get_en_passant, was_en_passant_played};
+
+use eframe::egui::{CentralPanel, Color32, Context, Image, Pos2, Rect, Shape, Ui, Vec2};
 use eframe::{App, Frame};
 use std::collections::HashMap;
-
-use std::thread;
-use std::sync::mpsc::{Receiver, channel};
+use std::thread::sleep;
+use std::time::Duration;
 
 pub struct ChessApp<'a> {
     piece_images: HashMap<(PieceKind, Color), Image<'a>>,
     board: Board,
-    window_size: f32,
     square_size: f32,
     turn: Color,
-    test: i32,
-    receiver: Receiver<i32>,
+    chosen_piece: Option<Piece>,
+    en_passant: Option<Position>,
+    possible_moves: Vec<Position>,
 }
 
 impl<'a> Default for ChessApp<'a> {
     fn default() -> ChessApp<'a> {
         let size = 400.;
         let square_size = size / 8.;
-        let (_, receiver): (_, Receiver<i32>) = channel();
 
         ChessApp {
             piece_images: init_assets(square_size),
             board: Board::new(),
-            window_size: size,
             square_size: square_size,
             turn: Color::White,
-            test: 0,
-            receiver: receiver,
+            chosen_piece: None,
+            en_passant: None,
+            possible_moves: Vec::new(),
         }
     }
 }
@@ -41,45 +41,157 @@ impl<'a> Default for ChessApp<'a> {
 impl<'a> App for ChessApp<'a> {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         CentralPanel::default().show(ctx, |ui| {
-            for row in 0..8 {
-                for col in 0..8 {
-                    let mut square_color = Color32::from_rgb(165, 82, 42);
-                    if (row + col) % 2 == 0 {
-                        square_color = Color32::from_rgb(255, 228, 196);
+            self.draw_board_with_pieces(ui);
+            self.draw_move_selection(ui);
+
+            if let Some(pos) = ctx.input(|i| i.pointer.press_origin()) {
+                let click_position =
+                    convert_click_to_board_position(pos, self.turn, self.square_size);
+                println!("{:?}", click_position);
+                match self.chosen_piece {
+                    Some(piece) => {
+                        if self.possible_moves.contains(&click_position) {
+                            self.bust_a_move(piece, click_position);
+                            self.set_values_at_the_end_of_turn();
+                            // The ui is so damn fast that without sleep, it uses the same click multiple times
+                            sleep(Duration::from_secs_f32(0.05));
+                        } else {
+                            self.select_piece_and_update_moves(&click_position);
+                        }
                     }
-                    let row = row as f32;
-                    let col = col as f32;
-
-                    let rect = Rect{
-                        min: Pos2{ x: col * self.square_size, y: row * self.square_size}, 
-                        max: Pos2{ x: (col + 1.) * self.square_size, y: (row + 1.) * self.square_size}
-                    };
-                    
-                    let square = make_square(rect, square_color);
-                    ui.painter().add(square);
-
-                    let mut board_x = col as usize;
-                    let mut board_y = row as usize;
-
-                    if self.turn == Color::White {
-                        board_x = 7 - board_x;
-                        board_y = 7 - board_y;
-                    }
-    
-                    if let Some(piece) = self.board.get_piece_from_position(&Position::new(board_x, board_y)) {
-                        let piece_image = self.piece_images.get(&(piece.kind, piece.color)).unwrap();
-                        piece_image.paint_at(ui, rect);
+                    None => {
+                        self.select_piece_and_update_moves(&click_position);
                     }
                 }
             }
+        });
+    }
+}
 
-            if let Some(pos) = ctx.input(|i| i.pointer.press_origin()) {
-                println!("{:?}", pos);
-                
+impl<'a> ChessApp<'a> {
+    fn draw_board_with_pieces(&self, ui: &mut Ui) {
+        for row in 0..8 {
+            for col in 0..8 {
+                let mut square_color = Color32::from_rgb(165, 82, 42);
+                if (row + col) % 2 == 0 {
+                    square_color = Color32::from_rgb(255, 228, 196);
+                }
+                let row = row as f32;
+                let col = col as f32;
 
+                let rect = Rect::from_min_size(
+                    Pos2::new(col * self.square_size, row * self.square_size),
+                    Vec2::new(self.square_size, self.square_size),
+                );
+
+                let square = make_square(rect, square_color, true);
+                ui.painter().add(square);
+
+                let mut board_x = col as usize;
+                let mut board_y = row as usize;
+
+                if self.turn == Color::White {
+                    board_x = 7 - board_x;
+                    board_y = 7 - board_y;
+                }
+
+                if let Some(piece) = self
+                    .board
+                    .get_piece_from_position(&Position::new(board_x, board_y))
+                {
+                    let piece_image = self.piece_images.get(&(piece.kind, piece.color)).unwrap();
+                    piece_image.paint_at(ui, rect);
+                }
             }
-            println!("a");
         }
-    );
+    }
 
-}}
+    fn draw_move_selection(&mut self, ui: &mut Ui) {
+        if let Some(piece) = self.chosen_piece {
+            let piece_pos =
+                convert_board_position_to_ui(&piece.position, self.turn, self.square_size);
+            let piece_rect =
+                Rect::from_min_size(piece_pos, Vec2::new(self.square_size, self.square_size));
+            let square = make_square(piece_rect, Color32::BLUE, false);
+            ui.painter().add(square);
+        }
+
+        for position in &self.possible_moves {
+            let move_pos = convert_board_position_to_ui(position, self.turn, self.square_size);
+            let move_dot = Shape::circle_filled(
+                Pos2::new(
+                    move_pos.x + (self.square_size / 2.),
+                    move_pos.y + (self.square_size / 2.),
+                ),
+                self.square_size / 10.,
+                Color32::GRAY,
+            );
+            ui.painter().add(move_dot);
+        }
+    }
+
+    fn select_piece_and_update_moves(&mut self, position: &Position) {
+        self.select_piece(position);
+        if let Some(piece) = self.chosen_piece {
+            self.get_possible_moves(piece);
+        } else {
+            self.possible_moves = Vec::new();
+        }
+    }
+
+    fn select_piece(&mut self, position: &Position) -> Option<Piece> {
+        let piece_option = self.board.get_piece_from_position(position);
+        if let Some(piece) = piece_option {
+            if piece.color == self.turn {
+                self.chosen_piece = Some(*piece);
+                return Some(*piece);
+            }
+        }
+        self.chosen_piece = None;
+        None
+    }
+
+    fn get_possible_moves(&mut self, chosen_piece: Piece) {
+        let positions = self.board.get_all_positions();
+        let friendly_positions = &positions[(self.turn == Color::Black) as usize];
+        let opponent_positions = &positions[(self.turn == Color::White) as usize];
+        self.possible_moves =
+            chosen_piece.get_piece_moves(friendly_positions, opponent_positions, &self.en_passant);
+    }
+
+    fn set_values_at_the_end_of_turn(&mut self) {
+        self.chosen_piece = None;
+        if self.turn == Color::White {
+            self.turn = Color::Black;
+        } else {
+            self.turn = Color::White;
+        }
+        self.possible_moves = Vec::new();
+    }
+
+    fn bust_a_move(&mut self, piece: Piece, to_position: Position) {
+        let old_position = piece.position;
+        let piece_kind = piece.kind;
+
+        // can we make this bit better? use the self.chosen_piece as mutable reference
+        // so we dont have to dig it out again?
+        let piece_to_move = match &mut self.board.board[old_position.x][old_position.y] {
+            Some(piece_to_move) => piece_to_move,
+            None => panic!("Oh no! There should be a piece at this position."),
+        };
+        piece_to_move.move_piece(to_position);
+
+        // update king position
+        if piece_kind == PieceKind::K {
+            self.board.king_positions[(self.turn == Color::Black) as usize] = to_position;
+        }
+
+        if was_en_passant_played(&piece_kind, &to_position, &self.en_passant) {
+            self.board
+                .remove_piece(&Position::new(to_position.x, old_position.y));
+        }
+
+        self.en_passant = get_en_passant(&piece_kind, &old_position, &to_position);
+        self.board.move_piece(&old_position, &to_position);
+    }
+}
