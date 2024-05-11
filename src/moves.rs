@@ -1,3 +1,5 @@
+use std::fs::OpenOptions;
+
 use crate::helpers::{Direction, Position};
 
 fn get_straight_moves(
@@ -30,6 +32,46 @@ fn get_straight_moves(
         }
     }
     allowed_moves
+}
+
+pub fn get_rook_moves(
+    piece_position: &Position,
+    friendly_positions: &Vec<Position>,
+    opponent_positions: &Vec<Position>
+) -> Vec<Position> {
+    let directions = vec![
+        Direction::new(0, 1),
+        Direction::new(0, -1),
+        Direction::new(-1, 0),
+        Direction::new(1, 0),
+    ];
+
+    get_straight_moves(directions, piece_position, friendly_positions, opponent_positions)
+}
+
+pub fn get_bishop_moves(
+    piece_position: &Position,
+    friendly_positions: &Vec<Position>,
+    opponent_positions: &Vec<Position>
+) -> Vec<Position> {
+    let directions = vec![
+        Direction::new(1, 1),
+        Direction::new(1, -1),
+        Direction::new(-1, 1),
+        Direction::new(-1, -),
+    ];
+
+    get_straight_moves(directions, piece_position, friendly_positions, opponent_positions)
+}
+
+pub fn get_queen_moves(
+    piece_position: &Position,
+    friendly_positions: &Vec<Position>,
+    opponent_positions: &Vec<Position>
+) -> Vec<Position> {
+    let mut moves = get_rook_moves(piece_position, friendly_positions, opponent_positions);
+    moves.append(&mut get_bishop_moves(piece_position, friendly_positions, opponent_positions));
+    moves
 }
 
 pub fn get_knight_moves(piece_position: &Position, friendly_positions: &Vec<Position>) -> Vec<Position> {
@@ -98,13 +140,10 @@ mod test_moves {
             Position::new(2, 4),
             Position::new(6, 2),
         ];
-
         let opponent_positions = vec![
             Position::new(4, 3),
             Position::new(1, 1),
         ];
-
-        let output = get_straight_moves(directions, &piece_position, &friendly_positions, &opponent_positions);
         let expected_output = vec![
             Position::new(3, 4),
             Position::new(5, 4),
@@ -115,6 +154,8 @@ mod test_moves {
             Position::new(2, 2),
             Position::new(1, 1),
         ];
+
+        let output = get_straight_moves(directions, &piece_position, &friendly_positions, &opponent_positions);
         assert_eq!(expected_output, output);
     }
 }
