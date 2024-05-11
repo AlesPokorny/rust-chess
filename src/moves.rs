@@ -1,7 +1,8 @@
 use crate::positions::Position;
 
-pub fn get_knight_moves(piece_position: &[usize; 2], friendly_positions: &Vec<Position>) -> Vec<Position> {
-    let [x, y] = piece_position;
+pub fn get_knight_moves(piece_position: &Position, friendly_positions: &Vec<Position>) -> Vec<Position> {
+    let x = piece_position.x;
+    let y = piece_position.y;
     let knight_moves: [(i32, i32); 8] = [
             (-2, -1),
             (-2, 1),
@@ -12,12 +13,11 @@ pub fn get_knight_moves(piece_position: &[usize; 2], friendly_positions: &Vec<Po
             (-1, 2),
             (1, 2),
         ];
-
     let mut moves: Vec<Position> = Vec::new();
 
     for (move_x, move_y) in knight_moves {
-        let new_x = *x as i32 + move_x;
-        let new_y = *y as i32 + move_y;
+        let new_x = x as i32 + move_x;
+        let new_y = y as i32 + move_y;
         if let Some(new_position) = Position::get_valid_position(new_x, new_y){
             if !friendly_positions.contains(&new_position) {
                 moves.push(new_position);
@@ -35,7 +35,7 @@ mod test_moves {
 
     #[test]
     fn test_get_knight_moves() {
-        let piece_position = [1, 6];
+        let piece_position = Position::new(1, 6);
         let friendly_positions: Vec<Position> = vec![
             Position::new(0, 0),
             Position::new(2, 6),
