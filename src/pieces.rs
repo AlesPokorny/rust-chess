@@ -1,4 +1,4 @@
-use crate::positions::Position;
+use crate::helpers::Position;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Color {
@@ -57,7 +57,7 @@ impl std::fmt::Display for Piece {
             PieceKind::K => 'K',
             PieceKind::P => 'P',
         };
-        
+
         if matches!(self.color, Color::Black) {
             output = output.to_ascii_lowercase();
         }

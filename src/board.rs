@@ -1,13 +1,13 @@
 
 use crate::pieces::{ Piece, PieceKind, Color };
-use crate::positions::Position;
+use crate::helpers::Position;
 
 pub struct Board {
     pub board: [[Option<Piece>; 8]; 8],
 }
 
 impl Board {
-    pub fn new() -> Board { 
+    pub fn new() -> Board {
         let temp_board = [
             ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
             ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
@@ -127,7 +127,7 @@ mod test_board {
     #[test]
     fn test_move_piece() {
         let mut board = Board::new();
-        
+
         board.move_piece([1, 0], [2, 0]);
 
         let target_piece = board.board[2][0].unwrap();

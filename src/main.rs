@@ -2,7 +2,7 @@ mod pieces;
 mod board;
 mod utils;
 mod moves;
-mod positions;
+mod helpers;
 
 use crate::board::Board;
 use crate::pieces::Color;
