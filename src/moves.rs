@@ -58,7 +58,7 @@ pub fn get_bishop_moves(
         Direction::new(1, 1),
         Direction::new(1, -1),
         Direction::new(-1, 1),
-        Direction::new(-1, -),
+        Direction::new(-1, -1),
     ];
 
     get_straight_moves(directions, piece_position, friendly_positions, opponent_positions)
