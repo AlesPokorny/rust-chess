@@ -1,4 +1,3 @@
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Position {
     pub x: usize,
@@ -12,7 +11,7 @@ impl Position {
 
     pub fn get_valid_position(x: i32, y: i32) -> Option<Position> {
         if (0..8).contains(&x) & (0..8).contains(&y) {
-            return Some(Position::new(x as usize, y as usize))
+            return Some(Position::new(x as usize, y as usize));
         }
         None
     }

@@ -1,10 +1,14 @@
-
-use crate::pieces::{ Piece, PieceKind, Color };
 use crate::helpers::Position;
+use crate::pieces::{Color, Piece, PieceKind};
+use crate::utils::chess_coord_to_array_coord;
 
-#[derive(Clone, Debug)]
+use eframe::egui;
+use image::io::Reader as ImageReader;
+
+#[derive(Clone, Copy, Debug)]
 pub struct Board {
     pub board: [[Option<Piece>; 8]; 8],
+    pub king_positions: [Position; 2],
 }
 
 impl Board {
@@ -30,7 +34,11 @@ impl Board {
                 [None, None, None, None, None, None, None, None],
                 [None, None, None, None, None, None, None, None],
                 [None, None, None, None, None, None, None, None],
-            ]
+            ],
+            king_positions: [
+                chess_coord_to_array_coord(String::from("e1")).unwrap(),
+                chess_coord_to_array_coord(String::from("d5")).unwrap(),
+            ],
         };
 
         for (row_i, row) in temp_board.iter().enumerate() {
@@ -45,7 +53,11 @@ impl Board {
                         'p' => PieceKind::P,
                         _ => panic!("Unexpected piece"),
                     };
-                    let color = if field.is_lowercase() { Color::Black } else { Color:: White };
+                    let color = if field.is_lowercase() {
+                        Color::Black
+                    } else {
+                        Color::White
+                    };
                     let position = Position::new(col_i, row_i);
 
                     result_board.board[col_i][row_i] = Some(Piece::new(color, piece_kind, position))
@@ -57,13 +69,9 @@ impl Board {
     }
 
     pub fn print_board(&self, turn: &Color) {
-        let mut transposed_board: Vec<Vec<Option<Piece>>> = (0..8).map(
-                |col| {
-                    (0..8)
-                    .map(|row| self.board[row][col])
-                    .collect()
-                }
-            ).collect();
+        let mut transposed_board: Vec<Vec<Option<Piece>>> = (0..8)
+            .map(|col| (0..8).map(|row| self.board[row][col]).collect())
+            .collect();
         let mut column_label = "    H G F E D C B A";
 
         if turn == &Color::White {
@@ -93,17 +101,15 @@ impl Board {
 
     pub fn move_piece(&mut self, from: &Position, to: &Position) {
         match self.board[from.x][from.y] {
-            Some(piece) => {
-                match self.board[to.x][to.y] {
-                    Some(old_piece) => {
-                        if piece.color == old_piece.color {
-                            panic!("Something went wrong, trying to overwrite same color piece");
-                        } else {
-                            self.board[to.x][to.y] = Some(piece);
-                        }
-                    },
-                    None => self.board[to.x][to.y] = Some(piece),
+            Some(piece) => match self.board[to.x][to.y] {
+                Some(old_piece) => {
+                    if piece.color == old_piece.color {
+                        panic!("Something went wrong, trying to overwrite same color piece");
+                    } else {
+                        self.board[to.x][to.y] = Some(piece);
+                    }
                 }
+                None => self.board[to.x][to.y] = Some(piece),
             },
             None => panic!("No piece at the position {:?}", from),
         }
@@ -122,17 +128,44 @@ impl Board {
         let mut white: Vec<Piece> = Vec::new();
         let mut black: Vec<Piece> = Vec::new();
         for row in self.board {
-            for col in row {
-                if let Some(piece) = col {
-                    if piece.color == Color::White {
-                        white.push(piece);
-                    } else {
-                        black.push(piece);
-                    }
+            for piece in row.into_iter().flatten() {
+                if piece.color == Color::White {
+                    white.push(piece);
+                } else {
+                    black.push(piece);
                 }
             }
         }
         [white, black]
+    }
+
+    pub fn get_all_moves_of_color(
+        &self,
+        color: Color,
+        en_passant: &Option<Position>,
+    ) -> Vec<Position> {
+        let color_index: usize;
+        let opponent_index: usize;
+        if color == Color::White {
+            color_index = 0;
+            opponent_index = 1;
+        } else {
+            color_index = 1;
+            opponent_index = 0;
+        }
+        let all_pieces = self.get_pieces();
+        let color_pieces = &all_pieces[color_index];
+
+        let friendly_positions = &self.get_color_positions(color_pieces);
+        let opponent_positions = &self.get_color_positions(&all_pieces[opponent_index]);
+
+        let mut all_moves: Vec<Position> = Vec::new();
+        for piece in color_pieces {
+            let piece_moves =
+                piece.get_piece_moves(friendly_positions, opponent_positions, en_passant);
+            all_moves.extend(piece_moves);
+        }
+        all_moves
     }
 
     pub fn get_color_positions(&self, pieces: &[Piece]) -> Vec<Position> {

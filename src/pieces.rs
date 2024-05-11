@@ -1,20 +1,20 @@
+use crate::board::Board;
 use crate::helpers::Position;
 use crate::moves::{
-    get_bishop_moves,
-    get_knight_moves,
-    get_king_moves,
-    get_pawn_moves,
-    get_rook_moves,
-    get_queen_moves,
+    get_bishop_moves, get_king_moves, get_knight_moves, get_pawn_moves, get_queen_moves,
+    get_rook_moves, is_king_in_check,
 };
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+use eframe::egui;
+use std::path::Path;
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Color {
     White,
     Black,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum PieceKind {
     P,
     R,
@@ -57,22 +57,34 @@ impl Piece {
         self.has_moved = true;
     }
 
-    pub fn get_piece_moves(&self, friendly_positions: &Vec<Position>, opponent_positions: &Vec<Position>, en_passant: &Option<Position>) -> Vec<Position> {
-        match self.kind {
+    pub fn get_piece_moves(
+        &self,
+        friendly_positions: &[Position],
+        opponent_positions: &[Position],
+        en_passant: &Option<Position>,
+    ) -> Vec<Position> {
+        let all_moves = match self.kind {
             PieceKind::P => get_pawn_moves(
                 &self.position,
                 &self.has_moved,
                 friendly_positions,
                 opponent_positions,
-                if self.color == Color::White { 1 } else { -1},
-                en_passant
+                if self.color == Color::White { 1 } else { -1 },
+                en_passant,
             ),
             PieceKind::R => get_rook_moves(&self.position, friendly_positions, opponent_positions),
             PieceKind::N => get_knight_moves(&self.position, friendly_positions),
-            PieceKind::B => get_bishop_moves(&self.position, friendly_positions, opponent_positions),
+            PieceKind::B => {
+                get_bishop_moves(&self.position, friendly_positions, opponent_positions)
+            }
             PieceKind::Q => get_queen_moves(&self.position, friendly_positions, opponent_positions),
             PieceKind::K => get_king_moves(&self.position, friendly_positions),
-        }
+        };
+        all_moves
+    }
+
+    fn filter_check_moves(moves: &Vec<Position>, mut board: Board) {
+        for piece_move in moves {}
     }
 }
 
