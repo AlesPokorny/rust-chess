@@ -25,14 +25,15 @@ pub fn get_user_input(message: &str) -> Option<[usize; 2]> {
     chess_coord_to_array_coord(from_input)
 }
 
-pub fn change_turn(mut turn: &Color) {
-    if turn == &Color::White {
-        turn = &Color::Black;
+pub fn change_turn(mut turn: Color) -> Color {
+    if turn == Color::White {
+        turn = Color::Black;
         println!("--- Black turn ---")
     } else {
-        turn = &Color::White;
+        turn = Color::White;
         println!("--- White turn ---");
     }
+    turn
 }
 
 #[cfg(test)]

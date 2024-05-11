@@ -53,7 +53,8 @@ impl Piece {
     }
 
     pub fn move_piece(&mut self, new_position: Position) {
-        self.position = new_position
+        self.position = new_position;
+        self.has_moved = true;
     }
 
     pub fn get_piece_moves(&self, friendly_positions: &Vec<Position>, opponent_positions: &Vec<Position>, en_passant: &Option<Position>) -> Vec<Position> {

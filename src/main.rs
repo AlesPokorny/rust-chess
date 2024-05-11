@@ -21,11 +21,11 @@ fn main() {
         if turn_number == prev_turn_number {
             println!("Try again");
         } else {
-            change_turn(&mut turn);
+            turn = change_turn(turn);
             prev_turn_number = turn_number;
         }
 
-        board.print_board();
+        board.print_board(&turn);
         let from_xy = match get_user_input("Select piece: ") {
             Some(from) => from,
             None => {
@@ -42,14 +42,15 @@ fn main() {
                 continue;
             }
         };
+        println!("{:?}", piece);
 
         if piece.color != turn {
             println!{"ERROR: Wrong color, dumbp"};
             continue;
         }
 
-
         let possible_moves = &piece.get_piece_moves(&all_positions[0], &all_positions[1], &None);
+        println!("{:?}", possible_moves);
         let to_xy = match get_user_input("Move to: ") {
             Some(to) => to,
             None => {
@@ -70,7 +71,6 @@ fn main() {
             continue;
         }
         piece.move_piece(new_position);
-
         board.move_piece(from_xy, to_xy);
         turn_number += 1;
     }

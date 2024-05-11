@@ -55,17 +55,30 @@ impl Board {
         result_board
     }
 
-    pub fn print_board(&self) {
-        let transposed_board: Vec<Vec<Option<Piece>>> = (0..8).map(
+    pub fn print_board(&self, turn: &Color) {
+        let mut transposed_board: Vec<Vec<Option<Piece>>> = (0..8).map(
                 |col| {
                     (0..8)
                     .map(|row| self.board[row][col])
                     .collect()
                 }
             ).collect();
+        let mut column_label = "    H G F E D C B A";
+
+        if turn == &Color::White {
+            transposed_board.reverse();
+            column_label = "    A B C D E F G H"
+        }
+
         for (row_i, row) in transposed_board.iter().enumerate() {
-            print!("{}.| ", row_i + 1);
-            for piece in row.iter() {
+            let mut row_label = row_i + 1;
+            let mut row_to_loop = row.clone();
+            if turn == &Color::White {
+                row_to_loop.reverse();
+                row_label = 9 - row_label;
+            }
+            print!("{}.| ", row_label);
+            for piece in row_to_loop.iter() {
                 match piece {
                     Some(piece) => print!("{} ", piece),
                     None => print!("- "),
@@ -74,7 +87,7 @@ impl Board {
             println!();
         }
         println!("  |________________");
-        println!("    H G F E D C B A");
+        println!("{}", column_label);
     }
 
     pub fn move_piece(&mut self, from: [usize; 2], to: [usize; 2]) {
