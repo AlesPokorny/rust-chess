@@ -9,14 +9,14 @@ pub struct Board {
 impl Board {
     pub fn new() -> Board {
         let temp_board = [
-            ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
-            ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
-            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
-            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
-            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
-            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+            ['R', 'N', 'B', 'K', 'Q', 'B', 'N', 'R'],
             ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
-            ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'],
+            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+            ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+            ['r', 'n', 'b', 'k', 'q', 'b', 'n', 'r'],
         ];
 
         let mut result_board: Board = Board {
@@ -45,9 +45,9 @@ impl Board {
                         _ => panic!("Unexpected piece"),
                     };
                     let color = if field.is_lowercase() { Color::Black } else { Color:: White };
-                    let position = Position::new(7 - row_i, col_i);
+                    let position = Position::new(col_i, row_i);
 
-                    result_board.board[row_i][col_i] = Some(Piece::new(color, piece_kind, position))
+                    result_board.board[col_i][row_i] = Some(Piece::new(color, piece_kind, position))
                 }
             }
         }
@@ -56,8 +56,15 @@ impl Board {
     }
 
     pub fn print_board(&self) {
-        for (row_i, row) in self.board.iter().enumerate() {
-            print!("{}.| ", 7 - row_i);
+        let transposed_board: Vec<Vec<Option<Piece>>> = (0..8).map(
+                |col| {
+                    (0..8)
+                    .map(|row| self.board[row][col])
+                    .collect()
+                }
+            ).collect();
+        for (row_i, row) in transposed_board.iter().enumerate() {
+            print!("{}.| ", row_i + 1);
             for piece in row.iter() {
                 match piece {
                     Some(piece) => print!("{} ", piece),
@@ -67,7 +74,7 @@ impl Board {
             println!();
         }
         println!("  |________________");
-        println!("    A B C D E F G H");
+        println!("    H G F E D C B A");
     }
 
     pub fn move_piece(&mut self, from: [usize; 2], to: [usize; 2]) {
@@ -128,14 +135,14 @@ mod test_board {
     fn test_move_piece() {
         let mut board = Board::new();
 
-        board.move_piece([1, 0], [2, 0]);
+        board.move_piece([0, 1], [0, 7]);
 
-        let target_piece = board.board[2][0].unwrap();
+        let target_piece: crate::pieces::Piece = board.board[0][7].unwrap();
 
         assert_eq!(target_piece.kind, PieceKind::P);
-        assert_eq!(target_piece.color, Color::Black);
+        assert_eq!(target_piece.color, Color::White);
 
-        match board.board[1][0] {
+        match board.board[0][1] {
             Some(_) => assert!(false),
             None => assert!(true),
         }

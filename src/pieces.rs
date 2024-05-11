@@ -1,4 +1,12 @@
 use crate::helpers::Position;
+use crate::moves::{
+    get_bishop_moves,
+    get_knight_moves,
+    get_king_moves,
+    get_pawn_moves,
+    get_rook_moves,
+    get_queen_moves,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Color {
@@ -44,8 +52,28 @@ impl Piece {
         }
     }
 
-    fn move_piece(mut self, new_position: Position) {
+    pub fn move_piece(&mut self, new_position: Position) {
         self.position = new_position
+    }
+
+    pub fn get_piece_moves(&self, friendly_positions: &Vec<Position>, opponent_positions: &Vec<Position>, en_passant: &Option<Position>) -> Vec<Position> {
+        let moves = match self.kind {
+            PieceKind::P => get_pawn_moves(
+                &self.position,
+                &self.has_moved,
+                friendly_positions,
+                opponent_positions,
+                if self.color == Color::White { 1 } else { -1},
+                en_passant
+            ),
+            PieceKind::R => get_rook_moves(&self.position, friendly_positions, opponent_positions),
+            PieceKind::N => get_knight_moves(&self.position, friendly_positions),
+            PieceKind::B => get_bishop_moves(&self.position, friendly_positions, opponent_positions),
+            PieceKind::Q => get_queen_moves(&self.position, friendly_positions, opponent_positions),
+            PieceKind::K => get_king_moves(&self.position, friendly_positions),
+        };
+
+        moves
     }
 }
 

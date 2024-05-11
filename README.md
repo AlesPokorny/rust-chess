@@ -1,6 +1,6 @@
 # Rust
 ## TODO
- - game logic
+ - checks
  - game state to FEN
  - GUI
  - castling
