@@ -1,11 +1,15 @@
 mod pieces;
 mod board;
+mod utils;
+mod moves;
 
-use crate::board::{create_starting_board, print_board};
+use crate::board::Board;
+use crate::pieces::Color;
 
 
 fn main() {
-    let board = create_starting_board();
+    let mut board = Board::new();
+    let mut turn = Color::White;
 
-    print_board(board);
+    board.print_board();
 }
