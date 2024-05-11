@@ -22,6 +22,7 @@ pub struct Piece {
     pub kind: PieceKind,
     pub position: Position,
     pub points: i32,
+    pub has_moved: bool,
 }
 
 impl Piece {
@@ -39,6 +40,7 @@ impl Piece {
             kind,
             position,
             points,
+            has_moved: false,
         }
     }
 
