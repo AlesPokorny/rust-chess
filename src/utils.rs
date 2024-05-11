@@ -1,21 +1,19 @@
-use crate::pieces::Color;
+use crate::helpers::Position;
+use crate::pieces::{Color, PieceKind};
+
 use std::io;
 
-fn chess_coord_to_array_coord(coord: String) -> Option<[usize; 2]> {
+fn chess_coord_to_array_coord(coord: String) -> Option<Position> {
     if coord.trim().chars().count() != 2 {
         return None
     }
-    let col = 104 - coord.chars().nth(0).unwrap().to_ascii_lowercase() as usize;
-    let row = (coord.chars().nth(1).unwrap() as usize - '0' as usize) - 1;
+    let col = 104 - coord.chars().next().unwrap().to_ascii_lowercase() as i32;
+    let row = (coord.chars().nth(1).unwrap() as i32 - '0' as i32) - 1;
 
-    if (row > 7) | (col > 7) {
-        return None
-    }
-
-    return Some([col, row])
+    Position::get_valid_position(col, row)
 }
 
-pub fn get_user_input(message: &str) -> Option<[usize; 2]> {
+pub fn get_user_input(message: &str) -> Option<Position> {
     println!("{}", message);
     let mut from_input = String::new();
     io::stdin()
@@ -36,14 +34,66 @@ pub fn change_turn(mut turn: Color) -> Color {
     turn
 }
 
+pub fn get_en_passant(piece_kind: &PieceKind, from_position: &Position, to_position: &Position) -> Option<Position> {
+    if (piece_kind == &PieceKind::P) & ((from_position.y as i32 - to_position.y as i32).abs() == 2) {
+        if to_position.y == 3 {
+            return Some(Position::new(to_position.x, 2))
+        }
+        return Some(Position::new(to_position.x, 5))
+    }
+    None
+}
+
+pub fn was_en_passant_played(piece_kind: &PieceKind, position: &Position, en_passant: &Option<Position>) -> bool {
+    return match en_passant {
+        Some(en_passant_position) => {
+            if (en_passant_position == position) & (piece_kind == &PieceKind::P) { true } else { false }
+        }
+        None => false
+    }
+}
+
 #[cfg(test)]
 mod test_board {
-    use crate::utils::chess_coord_to_array_coord;
+    use crate::helpers::Position;
+    use crate::pieces::PieceKind;
+    use crate::utils::{chess_coord_to_array_coord, get_en_passant};
 
     #[test]
     fn test_chess_coord_to_array_coord() {
 
-        assert_eq!(Some([6, 2]), chess_coord_to_array_coord(String::from("b3")));
+        assert_eq!(Position::get_valid_position(6, 2), chess_coord_to_array_coord(String::from("b3")));
 
+    }
+
+    #[test]
+    fn test_get_en_passant() {
+        let output = get_en_passant(
+            &PieceKind::P,
+            &Position::new(2, 1),
+            &Position::new(2, 3),
+        );
+        assert_eq!(Some(Position::new(2, 2)), output);
+
+        let output = get_en_passant(
+            &PieceKind::P,
+            &Position::new(2, 7),
+            &Position::new(2, 5),
+        );
+        assert_eq!(Some(Position::new(2, 5)), output);
+
+        let output = get_en_passant(
+            &PieceKind::P,
+            &Position::new(2, 7),
+            &Position::new(2, 6),
+        );
+        assert_eq!(None, output);
+
+        let output = get_en_passant(
+            &PieceKind::R,
+            &Position::new(2, 7),
+            &Position::new(2, 5),
+        );
+        assert_eq!(None, output);
     }
 }

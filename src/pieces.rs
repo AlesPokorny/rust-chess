@@ -58,7 +58,7 @@ impl Piece {
     }
 
     pub fn get_piece_moves(&self, friendly_positions: &Vec<Position>, opponent_positions: &Vec<Position>, en_passant: &Option<Position>) -> Vec<Position> {
-        let moves = match self.kind {
+        match self.kind {
             PieceKind::P => get_pawn_moves(
                 &self.position,
                 &self.has_moved,
@@ -72,9 +72,7 @@ impl Piece {
             PieceKind::B => get_bishop_moves(&self.position, friendly_positions, opponent_positions),
             PieceKind::Q => get_queen_moves(&self.position, friendly_positions, opponent_positions),
             PieceKind::K => get_king_moves(&self.position, friendly_positions),
-        };
-
-        moves
+        }
     }
 }
 

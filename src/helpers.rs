@@ -11,7 +11,7 @@ impl Position {
     }
 
     pub fn get_valid_position(x: i32, y: i32) -> Option<Position> {
-        if (x >= 0) & (x <= 7) & (y >= 0) & (y <= 7) {
+        if (0..8).contains(&x) & (0..8).contains(&y) {
             return Some(Position::new(x as usize, y as usize))
         }
         None

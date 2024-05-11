@@ -90,23 +90,31 @@ impl Board {
         println!("{}", column_label);
     }
 
-    pub fn move_piece(&mut self, from: [usize; 2], to: [usize; 2]) {
-        match self.board[from[0]][from[1]] {
+    pub fn move_piece(&mut self, from: &Position, to: &Position) {
+        match self.board[from.x][from.y] {
             Some(piece) => {
-                match self.board[to[0]][to[1]] {
+                match self.board[to.x][to.y] {
                     Some(old_piece) => {
                         if piece.color == old_piece.color {
                             panic!("Something went wrong, trying to overwrite same color piece");
                         } else {
-                            self.board[to[0]][to[1]] = Some(piece);
+                            self.board[to.x][to.y] = Some(piece);
                         }
                     },
-                    None => self.board[to[0]][to[1]] = Some(piece),
+                    None => self.board[to.x][to.y] = Some(piece),
                 }
             },
             None => panic!("No piece at the position {:?}", from),
         }
-        self.board[from[0]][from[1]] = None;
+        self.board[from.x][from.y] = None;
+    }
+
+    pub fn get_piece_from_position(&self, position: &Position) -> &Option<Piece> {
+        &self.board[position.x][position.y]
+    }
+
+    pub fn remove_piece(&mut self, position: &Position) {
+        self.board[position.x][position.y] = None
     }
 
     pub fn get_pieces(&self) -> [Vec<Piece>; 2] {
@@ -126,7 +134,7 @@ impl Board {
         [white, black]
     }
 
-    pub fn get_color_positions(&self, pieces: &Vec<Piece>) -> Vec<Position> {
+    pub fn get_color_positions(&self, pieces: &[Piece]) -> Vec<Position> {
         pieces.iter().map(|piece| piece.position).collect()
     }
 
@@ -139,16 +147,17 @@ impl Board {
     }
 }
 
-
+#[cfg(test)]
 mod test_board {
     use crate::board::Board;
+    use crate::helpers::Position;
     use crate::pieces::{Color, PieceKind};
 
     #[test]
     fn test_move_piece() {
         let mut board = Board::new();
 
-        board.move_piece([0, 1], [0, 7]);
+        board.move_piece(&Position::new(0, 1), &Position::new(0, 7));
 
         let target_piece: crate::pieces::Piece = board.board[0][7].unwrap();
 

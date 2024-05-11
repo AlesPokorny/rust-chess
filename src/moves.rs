@@ -3,8 +3,8 @@ use crate::helpers::{Direction, Position};
 fn get_straight_moves(
     directions: Vec<Direction>,
     piece_position: &Position,
-    friendly_positions: &Vec<Position>,
-    opponent_positions: &Vec<Position>
+    friendly_positions: &[Position],
+    opponent_positions: &[Position],
 ) -> Vec<Position> {
     let mut allowed_moves: Vec<Position> = Vec::new();
     let (current_x, current_y) = piece_position.get_x_y_as_int();
@@ -72,7 +72,7 @@ pub fn get_queen_moves(
     moves
 }
 
-pub fn get_knight_moves(piece_position: &Position, friendly_positions: &Vec<Position>) -> Vec<Position> {
+pub fn get_knight_moves(piece_position: &Position, friendly_positions: &[Position]) -> Vec<Position> {
     let x = piece_position.x;
     let y = piece_position.y;
     let knight_moves: [(i32, i32); 8] = [
@@ -102,8 +102,8 @@ pub fn get_knight_moves(piece_position: &Position, friendly_positions: &Vec<Posi
 pub fn get_pawn_moves(
     position: &Position,
     has_moved: &bool,
-    friendly_positions: &Vec<Position>,
-    opponent_positions: &Vec<Position>,
+    friendly_positions: &[Position],
+    opponent_positions: &[Position],
     move_direction: i32,
     en_passant: &Option<Position>
 ) -> Vec<Position> {
@@ -175,6 +175,8 @@ pub fn get_king_moves(position: &Position, friendly_positions: &Vec<Position>) -
 
     moves
 }
+
+
 
 
 #[cfg(test)]
