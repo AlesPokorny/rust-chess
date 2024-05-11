@@ -36,6 +36,7 @@ fn main() {
         };
 
         let all_positions = board.get_all_positions();
+
         let piece = match &mut board.board[from_position.x][from_position.y] {
             // let piece = match &mut board.get_piece_from_position(&from_position) {
             Some(piece) => piece,
@@ -53,6 +54,7 @@ fn main() {
         }
 
         let possible_moves = &piece.get_piece_moves(&all_positions[0], &all_positions[1], &en_passant);
+
         println!("{:?}", possible_moves);
         let new_position = match get_user_input("Move to: ") {
             Some(to) => to,

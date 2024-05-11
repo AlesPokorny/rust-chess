@@ -2,6 +2,7 @@
 use crate::pieces::{ Piece, PieceKind, Color };
 use crate::helpers::Position;
 
+#[derive(Clone, Debug)]
 pub struct Board {
     pub board: [[Option<Piece>; 8]; 8],
 }

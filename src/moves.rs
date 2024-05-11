@@ -1,4 +1,6 @@
+use crate::board::Board;
 use crate::helpers::{Direction, Position};
+use crate::pieces::{Color, Piece};
 
 fn get_straight_moves(
     directions: Vec<Direction>,
@@ -176,7 +178,37 @@ pub fn get_king_moves(position: &Position, friendly_positions: &Vec<Position>) -
     moves
 }
 
+pub fn is_king_in_check(
+    king_position: Position,
+    king_color: Color,
+    board: Board,
+    friendly_positions: &[Position],
+    opponent_positions: &[Position],
+) -> bool {
+    let all_pieces = board.get_pieces();
+    let mut friendly_pieces: &Vec<Piece> = &Vec::new();
+    let mut opponent_pieces: &Vec<Piece> = &Vec::new();
 
+    if king_color == Color::White {
+        opponent_pieces = &all_pieces[1];
+        friendly_pieces = &all_pieces[0];
+    } else {
+        opponent_pieces = &all_pieces[0];
+        friendly_pieces = &all_pieces[1];
+    }
+
+    let knight_moves = get_knight_moves(&king_position, friendly_positions);
+    for knight_move in knight_moves {
+        match board.get_piece_from_position(knight_move) {
+            Some(piece) => if (piece.color)
+        }
+    }
+
+
+
+
+    false
+}
 
 
 #[cfg(test)]
