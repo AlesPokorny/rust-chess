@@ -1,6 +1,6 @@
 
 use crate::pieces::{ Piece, PieceKind, Color };
-
+use crate::positions::Position;
 
 pub struct Board {
     pub board: [[Option<Piece>; 8]; 8],
@@ -45,7 +45,7 @@ impl Board {
                         _ => panic!("Unexpected piece"),
                     };
                     let color = if field.is_lowercase() { Color::Black } else { Color:: White };
-                    let position = [7 - row_i, col_i];
+                    let position = Position::new(7 - row_i, col_i);
 
                     result_board.board[row_i][col_i] = Some(Piece::new(color, piece_kind, position))
                 }
@@ -106,11 +106,11 @@ impl Board {
         [white, black]
     }
 
-    pub fn get_color_positions(&self, pieces: &Vec<Piece>) -> Vec<[usize; 2]> {
+    pub fn get_color_positions(&self, pieces: &Vec<Piece>) -> Vec<Position> {
         pieces.iter().map(|piece| piece.position).collect()
     }
 
-    pub fn get_all_positions(&self) -> [Vec<[usize; 2]>; 2] {
+    pub fn get_all_positions(&self) -> [Vec<Position>; 2] {
         let pieces = self.get_pieces();
         let white_positions = self.get_color_positions(&pieces[0]);
         let black_positions = self.get_color_positions(&pieces[1]);

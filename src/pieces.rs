@@ -1,4 +1,4 @@
-
+use crate::positions::Position;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Color {
@@ -20,12 +20,12 @@ pub enum PieceKind {
 pub struct Piece {
     pub color: Color,
     pub kind: PieceKind,
-    pub position: [usize; 2],
+    pub position: Position,
     pub points: i32,
 }
 
 impl Piece {
-    pub fn new(color: Color, kind: PieceKind, position: [usize; 2]) -> Piece {
+    pub fn new(color: Color, kind: PieceKind, position: Position) -> Piece {
         let points = match kind {
             PieceKind::P => 1,
             PieceKind::R => 5,
@@ -42,7 +42,7 @@ impl Piece {
         }
     }
 
-    fn move_piece(mut self, new_position: [usize; 2]) {
+    fn move_piece(mut self, new_position: Position) {
         self.position = new_position
     }
 }
