@@ -29,7 +29,7 @@ impl<'a> Default for ChessApp<'a> {
         ChessApp {
             piece_images: init_assets(square_size),
             board: Board::new(),
-            square_size: square_size,
+            square_size,
             turn: Color::White,
             chosen_piece: None,
             en_passant: None,
@@ -155,8 +155,12 @@ impl<'a> ChessApp<'a> {
         let positions = self.board.get_all_positions();
         let friendly_positions = &positions[(self.turn == Color::Black) as usize];
         let opponent_positions = &positions[(self.turn == Color::White) as usize];
-        self.possible_moves =
-            chosen_piece.get_piece_moves(friendly_positions, opponent_positions, &self.en_passant, &self.board);
+        self.possible_moves = chosen_piece.get_piece_moves(
+            friendly_positions,
+            opponent_positions,
+            &self.en_passant,
+            &self.board,
+        );
     }
 
     fn set_values_at_the_end_of_turn(&mut self) {

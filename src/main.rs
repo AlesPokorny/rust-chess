@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 mod board;
 mod gui;
 mod helpers;

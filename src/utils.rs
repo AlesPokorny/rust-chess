@@ -1,5 +1,5 @@
 use crate::helpers::Position;
-use crate::pieces::{Color, PieceKind};
+use crate::pieces::PieceKind;
 
 use std::io;
 

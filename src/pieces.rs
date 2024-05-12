@@ -1,8 +1,8 @@
 use crate::board::Board;
 use crate::helpers::Position;
 use crate::moves::{
-    get_bishop_moves, get_king_moves, get_knight_moves, get_pawn_moves, get_queen_moves,
-    get_rook_moves, filter_check_moves
+    filter_check_moves, get_bishop_moves, get_king_moves, get_knight_moves, get_pawn_moves,
+    get_queen_moves, get_rook_moves,
 };
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -79,7 +79,7 @@ impl Piece {
             PieceKind::K => get_king_moves(&self.position, friendly_positions),
         };
 
-        filter_check_moves(self.position, all_moves, board, self.clone())
+        filter_check_moves(self.position, all_moves, board, *self)
     }
 }
 
