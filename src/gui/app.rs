@@ -16,9 +16,7 @@ pub struct ChessApp<'a> {
     piece_images: HashMap<(PieceKind, Color), Image<'a>>,
     board: Board,
     square_size: f32,
-    turn: Color,
     chosen_piece: Option<Piece>,
-    en_passant: Option<Position>,
     possible_moves: Vec<Position>,
 }
 
@@ -31,9 +29,7 @@ impl<'a> Default for ChessApp<'a> {
             piece_images: init_assets(square_size),
             board: Board::new(),
             square_size,
-            turn: Color::White,
             chosen_piece: None,
-            en_passant: None,
             possible_moves: Vec::new(),
         }
     }
@@ -42,20 +38,20 @@ impl<'a> Default for ChessApp<'a> {
 impl<'a> App for ChessApp<'a> {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         CentralPanel::default().show(ctx, |ui| {
+            self.check_window_size(ctx);
             self.draw_board_with_pieces(ui);
             self.draw_move_selection(ui);
-
+            
             if let Some(pos) = ctx.input(|i| i.pointer.press_origin()) {
                 let click_position =
-                    convert_click_to_board_position(pos, self.turn, self.square_size);
-                println!("{:?}", click_position);
+                    convert_click_to_board_position(pos, self.board.turn, self.square_size);
                 match self.chosen_piece {
                     Some(piece) => {
                         if self.possible_moves.contains(&click_position) {
                             self.bust_a_move(piece, click_position);
                             self.set_values_at_the_end_of_turn();
                             // The ui is so damn fast that without sleep, it uses the same click multiple times
-                            if self.board.is_checkmate(self.turn, &self.en_passant) {
+                            if self.board.is_checkmate() {
                                 println!("Checkmate!");
                                 exit(0);
                             }
@@ -74,6 +70,11 @@ impl<'a> App for ChessApp<'a> {
 }
 
 impl<'a> ChessApp<'a> {
+    fn check_window_size(&mut self, ctx: &Context) {
+        let size = f32::min(ctx.screen_rect().width(), ctx.screen_rect().height());
+        self.square_size = size / 8.;
+    }
+    
     fn draw_board_with_pieces(&self, ui: &mut Ui) {
         for row in 0..8 {
             for col in 0..8 {
@@ -95,7 +96,7 @@ impl<'a> ChessApp<'a> {
                 let mut board_x = col as usize;
                 let mut board_y = row as usize;
 
-                if self.turn == Color::White {
+                if self.board.turn == Color::White {
                     board_x = 7 - board_x;
                     board_y = 7 - board_y;
                 }
@@ -114,7 +115,7 @@ impl<'a> ChessApp<'a> {
     fn draw_move_selection(&mut self, ui: &mut Ui) {
         if let Some(piece) = self.chosen_piece {
             let piece_pos =
-                convert_board_position_to_ui(&piece.position, self.turn, self.square_size);
+                convert_board_position_to_ui(&piece.position, self.board.turn, self.square_size);
             let piece_rect =
                 Rect::from_min_size(piece_pos, Vec2::new(self.square_size, self.square_size));
             let square = make_square(piece_rect, Color32::BLUE, false);
@@ -122,7 +123,7 @@ impl<'a> ChessApp<'a> {
         }
 
         for position in &self.possible_moves {
-            let move_pos = convert_board_position_to_ui(position, self.turn, self.square_size);
+            let move_pos = convert_board_position_to_ui(position, self.board.turn, self.square_size);
             let move_dot = Shape::circle_filled(
                 Pos2::new(
                     move_pos.x + (self.square_size / 2.),
@@ -147,7 +148,7 @@ impl<'a> ChessApp<'a> {
     fn select_piece(&mut self, position: &Position) -> Option<Piece> {
         let piece_option = self.board.get_piece_from_position(position);
         if let Some(piece) = piece_option {
-            if piece.color == self.turn {
+            if piece.color == self.board.turn {
                 self.chosen_piece = Some(*piece);
                 return Some(*piece);
             }
@@ -158,22 +159,21 @@ impl<'a> ChessApp<'a> {
 
     fn get_possible_moves(&mut self, chosen_piece: Piece) {
         let positions = self.board.get_all_positions();
-        let friendly_positions = &positions[(self.turn == Color::Black) as usize];
-        let opponent_positions = &positions[(self.turn == Color::White) as usize];
+        let friendly_positions = &positions[(self.board.turn == Color::Black) as usize];
+        let opponent_positions = &positions[(self.board.turn == Color::White) as usize];
         self.possible_moves = chosen_piece.get_piece_moves(
             friendly_positions,
             opponent_positions,
-            &self.en_passant,
             &self.board,
         );
     }
 
     fn set_values_at_the_end_of_turn(&mut self) {
         self.chosen_piece = None;
-        if self.turn == Color::White {
-            self.turn = Color::Black;
+        if self.board.turn == Color::White {
+            self.board.turn = Color::Black;
         } else {
-            self.turn = Color::White;
+            self.board.turn = Color::White;
         }
         self.possible_moves = Vec::new();
     }
@@ -192,15 +192,15 @@ impl<'a> ChessApp<'a> {
 
         // update king position
         if piece_kind == PieceKind::K {
-            self.board.king_positions[(self.turn == Color::Black) as usize] = to_position;
+            self.board.king_positions[(self.board.turn == Color::Black) as usize] = to_position;
         }
 
-        if was_en_passant_played(&piece_kind, &to_position, &self.en_passant) {
+        if was_en_passant_played(&piece_kind, &to_position, &self.board.en_passant) {
             self.board
                 .remove_piece(&Position::new(to_position.x, old_position.y));
         }
 
-        self.en_passant = get_en_passant(&piece_kind, &old_position, &to_position);
+        self.board.en_passant = get_en_passant(&piece_kind, &old_position, &to_position);
         self.board.move_piece(&old_position, &to_position);
     }
 }

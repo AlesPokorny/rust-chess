@@ -6,6 +6,8 @@ use crate::utils::chess_coord_to_array_coord;
 pub struct Board {
     pub board: [[Option<Piece>; 8]; 8],
     pub king_positions: [Position; 2],
+    pub turn: Color,
+    pub en_passant: Option<Position>,
 }
 
 impl Board {
@@ -36,6 +38,8 @@ impl Board {
                 chess_coord_to_array_coord(String::from("e1")).unwrap(),
                 chess_coord_to_array_coord(String::from("e8")).unwrap(),
             ],
+            turn: Color::White,
+            en_passant: None,
         };
 
         for (row_i, row) in temp_board.iter().enumerate() {
@@ -139,7 +143,6 @@ impl Board {
     pub fn get_all_moves_of_color(
         &self,
         color: Color,
-        en_passant: &Option<Position>,
     ) -> Vec<Position> {
         let color_index: usize;
         let opponent_index: usize;
@@ -159,7 +162,7 @@ impl Board {
         let mut all_moves: Vec<Position> = Vec::new();
         for piece in color_pieces {
             let piece_moves =
-                piece.get_piece_moves(friendly_positions, opponent_positions, en_passant, self);
+                piece.get_piece_moves(friendly_positions, opponent_positions, self);
             all_moves.extend(piece_moves);
         }
         all_moves
@@ -177,15 +180,15 @@ impl Board {
         [white_positions, black_positions]
     }
 
-    pub fn is_checkmate(&self, turn: Color, en_passant: &Option<Position>) -> bool {
+    pub fn is_checkmate(&self) -> bool {
         let all_pieces = self.get_pieces();
         let all_positions = self.get_all_positions();
-        let friendly_positions = &all_positions[(turn == Color::Black) as usize];
-        let opponent_positions = &all_positions[(turn != Color::Black) as usize];
-        let friendly_pieces = &all_pieces[(turn == Color::Black) as usize];
+        let friendly_positions = &all_positions[(self.turn == Color::Black) as usize];
+        let opponent_positions = &all_positions[(self.turn != Color::Black) as usize];
+        let friendly_pieces = &all_pieces[(self.turn == Color::Black) as usize];
         for piece in friendly_pieces {
             let moves =
-                piece.get_piece_moves(friendly_positions, opponent_positions, en_passant, self);
+                piece.get_piece_moves(friendly_positions, opponent_positions, self);
             if !moves.is_empty() {
                 return false;
             }

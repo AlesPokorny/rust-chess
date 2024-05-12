@@ -58,7 +58,6 @@ impl Piece {
         &self,
         friendly_positions: &[Position],
         opponent_positions: &[Position],
-        en_passant: &Option<Position>,
         board: &Board,
     ) -> Vec<Position> {
         let all_moves = match self.kind {
@@ -68,7 +67,7 @@ impl Piece {
                 friendly_positions,
                 opponent_positions,
                 if self.color == Color::White { 1 } else { -1 },
-                en_passant,
+                &board.en_passant,
             ),
             PieceKind::R => get_rook_moves(&self.position, friendly_positions, opponent_positions),
             PieceKind::N => get_knight_moves(&self.position, friendly_positions),

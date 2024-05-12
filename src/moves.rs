@@ -209,15 +209,15 @@ pub fn get_king_moves(position: &Position, friendly_positions: &[Position]) -> V
     moves
 }
 
-pub fn is_field_in_check(field_position: Position, turn: Color, board: Board) -> bool {
+pub fn is_field_in_check(field_position: Position, board: Board) -> bool {
     let all_positions = board.get_all_positions();
-    let friendly_positions = &all_positions[(turn == Color::Black) as usize];
-    let opponent_positions = &all_positions[(turn != Color::Black) as usize];
+    let friendly_positions = &all_positions[(board.turn == Color::Black) as usize];
+    let opponent_positions = &all_positions[(board.turn != Color::Black) as usize];
 
     let knight_moves = get_knight_moves(&field_position, friendly_positions);
     for knight_move in knight_moves {
         if let Some(piece) = board.get_piece_from_position(&knight_move) {
-            if (piece.color != turn) & (piece.kind == PieceKind::N) {
+            if (piece.color != board.turn) & (piece.kind == PieceKind::N) {
                 return true;
             }
         }
@@ -235,7 +235,7 @@ pub fn is_field_in_check(field_position: Position, turn: Color, board: Board) ->
         .map(|positions_in_direction| positions_in_direction.last());
     for last_rook_move in last_rook_moves.into_iter().flatten() {
         if let Some(piece) = board.get_piece_from_position(last_rook_move) {
-            if (piece.color != turn) & ((piece.kind == PieceKind::R) | (piece.kind == PieceKind::Q))
+            if (piece.color != board.turn) & ((piece.kind == PieceKind::R) | (piece.kind == PieceKind::Q))
             {
                 return true;
             }
@@ -255,7 +255,7 @@ pub fn is_field_in_check(field_position: Position, turn: Color, board: Board) ->
         .collect();
     for last_bishop_move in last_bishop_moves.into_iter().flatten() {
         if let Some(piece) = board.get_piece_from_position(last_bishop_move) {
-            if (piece.color != turn) & ((piece.kind == PieceKind::B) | (piece.kind == PieceKind::Q))
+            if (piece.color != board.turn) & ((piece.kind == PieceKind::B) | (piece.kind == PieceKind::Q))
             {
                 return true;
             }
@@ -263,7 +263,7 @@ pub fn is_field_in_check(field_position: Position, turn: Color, board: Board) ->
     }
 
     // p(r)awns
-    let attack_direction = if turn == Color::White { -1 } else { 1 };
+    let attack_direction = if board.turn == Color::White { 1 } else { -1 };
     for direction in [
         Direction::new(-1, attack_direction),
         Direction::new(1, attack_direction),
@@ -273,9 +273,7 @@ pub fn is_field_in_check(field_position: Position, turn: Color, board: Board) ->
             field_position.y as i32 + direction.y,
         ) {
             if let Some(piece) = board.get_piece_from_position(&position_to_check) {
-                if (piece.color != turn)
-                    & ((piece.kind == PieceKind::B) | (piece.kind == PieceKind::Q))
-                {
+                if (piece.color != board.turn) & (piece.kind == PieceKind::P) {
                     return true;
                 }
             }
@@ -305,10 +303,10 @@ pub fn filter_check_moves(
         let king_position = if piece.kind == PieceKind::K {
             to_position
         } else {
-            temp_board.king_positions[(piece.color == Color::Black) as usize]
+            temp_board.king_positions[(board.turn == Color::Black) as usize]
         };
 
-        let is_check = is_field_in_check(king_position, piece.color, temp_board);
+        let is_check = is_field_in_check(king_position, temp_board);
 
         if !is_check {
             filtered_moves.push(to_position);
