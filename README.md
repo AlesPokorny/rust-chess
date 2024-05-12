@@ -2,8 +2,7 @@
 ## TODO
  - checks
     - en passant capture checks
- - checkmate
  - castling
- - promotion
+ - promotion (UI sucks)
  - menu
  - game state to FEN

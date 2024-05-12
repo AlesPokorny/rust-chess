@@ -176,6 +176,22 @@ impl Board {
 
         [white_positions, black_positions]
     }
+
+    pub fn is_checkmate(&self, turn: Color, en_passant: &Option<Position>) -> bool {
+        let all_pieces = self.get_pieces();
+        let all_positions = self.get_all_positions();
+        let friendly_positions = &all_positions[(turn == Color::Black) as usize];
+        let opponent_positions = &all_positions[(turn != Color::Black) as usize];
+        let friendly_pieces = &all_pieces[(turn == Color::Black) as usize];
+        for piece in friendly_pieces {
+            let moves =
+                piece.get_piece_moves(friendly_positions, opponent_positions, en_passant, self);
+            if !moves.is_empty() {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 #[cfg(test)]

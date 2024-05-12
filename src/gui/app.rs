@@ -8,6 +8,7 @@ use crate::utils::{get_en_passant, was_en_passant_played};
 use eframe::egui::{CentralPanel, Color32, Context, Image, Pos2, Rect, Shape, Ui, Vec2};
 use eframe::{App, Frame};
 use std::collections::HashMap;
+use std::process::exit;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -54,6 +55,10 @@ impl<'a> App for ChessApp<'a> {
                             self.bust_a_move(piece, click_position);
                             self.set_values_at_the_end_of_turn();
                             // The ui is so damn fast that without sleep, it uses the same click multiple times
+                            if self.board.is_checkmate(self.turn, &self.en_passant) {
+                                println!("Checkmate!");
+                                exit(0);
+                            }
                             sleep(Duration::from_secs_f32(0.05));
                         } else {
                             self.select_piece_and_update_moves(&click_position);
