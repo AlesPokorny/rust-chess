@@ -34,7 +34,7 @@ impl Board {
             ],
             king_positions: [
                 chess_coord_to_array_coord(String::from("e1")).unwrap(),
-                chess_coord_to_array_coord(String::from("d5")).unwrap(),
+                chess_coord_to_array_coord(String::from("e8")).unwrap(),
             ],
         };
 
@@ -159,7 +159,7 @@ impl Board {
         let mut all_moves: Vec<Position> = Vec::new();
         for piece in color_pieces {
             let piece_moves =
-                piece.get_piece_moves(friendly_positions, opponent_positions, en_passant);
+                piece.get_piece_moves(friendly_positions, opponent_positions, en_passant, self);
             all_moves.extend(piece_moves);
         }
         all_moves

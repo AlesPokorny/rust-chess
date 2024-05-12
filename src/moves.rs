@@ -210,17 +210,19 @@ pub fn get_king_moves(position: &Position, friendly_positions: &[Position]) -> V
     moves
 }
 
-pub fn is_king_in_check(
-    king_position: Position,
-    king_color: Color,
+pub fn is_field_in_check(
+    field_position: Position,
+    turn: Color,
     board: Board,
-    friendly_positions: &[Position],
-    opponent_positions: &[Position],
 ) -> bool {
-    let knight_moves = get_knight_moves(&king_position, friendly_positions);
+    let all_positions = board.get_all_positions();
+    let friendly_positions = &all_positions[(turn == Color::Black) as usize];
+    let opponent_positions = &all_positions[(turn != Color::Black) as usize];
+
+    let knight_moves = get_knight_moves(&field_position, friendly_positions);
     for knight_move in knight_moves {
         if let Some(piece) = board.get_piece_from_position(&knight_move) {
-            if (piece.color != king_color) & (piece.kind == PieceKind::N) {
+            if (piece.color != turn) & (piece.kind == PieceKind::N) {
                 return true;
             }
         }
@@ -229,55 +231,59 @@ pub fn is_king_in_check(
     // rooks, queen - the straight boiiiz
     let rook_moves = get_straight_moves(
         rook_directions(),
-        &king_position,
+        &field_position,
         friendly_positions,
         opponent_positions,
     );
     let last_rook_moves = rook_moves
         .iter()
-        .map(|positions_in_direction| positions_in_direction.last().unwrap());
-    for last_rook_move in last_rook_moves {
-        if let Some(piece) = board.get_piece_from_position(last_rook_move) {
-            if (piece.color != king_color)
-                & ((piece.kind == PieceKind::R) | (piece.kind == PieceKind::Q))
-            {
-                return true;
+        .map(|positions_in_direction|  positions_in_direction.last());
+    for last_rook_move_option in last_rook_moves {
+        if let Some(last_rook_move) = last_rook_move_option {
+            if let Some(piece) = board.get_piece_from_position(last_rook_move) {
+                if (piece.color != turn)
+                    & ((piece.kind == PieceKind::R) | (piece.kind == PieceKind::Q))
+                {
+                    return true;
+                }
             }
-        }
+        } 
     }
 
     // bishops, queen - the diagonal boiiz
     let bishop_moves = get_straight_moves(
-        rook_directions(),
-        &king_position,
+        bishop_directions(),
+        &field_position,
         friendly_positions,
         opponent_positions,
     );
-    let last_bishop_moves = bishop_moves
+    let last_bishop_moves: Vec<Option<&Position>> = bishop_moves
         .iter()
-        .map(|positions_in_direction| positions_in_direction.last().unwrap());
-    for last_bishop_move in last_bishop_moves {
-        if let Some(piece) = board.get_piece_from_position(last_bishop_move) {
-            if (piece.color != king_color)
-                & ((piece.kind == PieceKind::B) | (piece.kind == PieceKind::Q))
-            {
-                return true;
+        .map(|positions_in_direction| positions_in_direction.last()).collect();
+    for last_bishop_move_option in last_bishop_moves {
+        if let Some(last_bishop_move) = last_bishop_move_option {
+            if let Some(piece) = board.get_piece_from_position(last_bishop_move) {
+                if (piece.color != turn)
+                    & ((piece.kind == PieceKind::B) | (piece.kind == PieceKind::Q))
+                {
+                    return true;
+                }
             }
         }
     }
 
     // p(r)awns
-    let attack_direction = if king_color == Color::White { -1 } else { 1 };
+    let attack_direction = if turn == Color::White { -1 } else { 1 };
     for direction in [
         Direction::new(-1, attack_direction),
         Direction::new(1, attack_direction),
     ] {
         if let Some(position_to_check) = Position::get_valid_position(
-            king_position.x as i32 + direction.x,
-            king_position.y as i32 + direction.y,
+            field_position.x as i32 + direction.x,
+            field_position.y as i32 + direction.y,
         ) {
             if let Some(piece) = board.get_piece_from_position(&position_to_check) {
-                if (piece.color != king_color)
+                if (piece.color != turn)
                     & ((piece.kind == PieceKind::B) | (piece.kind == PieceKind::Q))
                 {
                     return true;
@@ -292,22 +298,30 @@ pub fn filter_check_moves(
     from_position: Position,
     to_positions: Vec<Position>,
     board: &Board,
+    piece: Piece,
 ) -> Vec<Position> {
+    // this method needs to be cleaned up
+    // also it is missing en passant capture checks
     let mut filtered_moves: Vec<Position> = Vec::new();
 
     for to_position in to_positions {
-        let mut temp_board = *board;
-        let moved_piece = temp_board.get_piece_from_position(&from_position).unwrap();
-        // moved_piece.move_piece(to_position);
+        let mut temp_board = board.clone();
+        let moved_piece = match &mut temp_board.board[from_position.x][from_position.y] {
+            Some(moved_piece) => moved_piece,
+            None => panic!("Oops, you done goofed"),
+        };
+        moved_piece.move_piece(to_position);
         temp_board.move_piece(&from_position, &to_position);
-        let all_positions = temp_board.get_all_positions();
-        let color_index_bool = moved_piece.color == Color::Black;
-        let is_check = is_king_in_check(
-            temp_board.king_positions[color_index_bool as usize],
-            moved_piece.color,
+        let king_position = if piece.kind == PieceKind::K { 
+            to_position
+        } else { 
+            temp_board.king_positions[(piece.color == Color::Black) as usize] 
+        };
+        
+        let is_check = is_field_in_check(
+            king_position,
+            piece.color,
             temp_board,
-            &all_positions[color_index_bool as usize],
-            &all_positions[!color_index_bool as usize],
         );
 
         if !is_check {
@@ -322,7 +336,7 @@ pub fn filter_check_moves(
 mod test_moves {
     use crate::helpers::{Direction, Position};
     use crate::moves::{get_king_moves, get_knight_moves, get_pawn_moves, get_straight_moves};
-
+    
     #[test]
     fn test_get_knight_moves() {
         let piece_position = Position::new(1, 6);

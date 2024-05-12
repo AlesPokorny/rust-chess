@@ -156,7 +156,7 @@ impl<'a> ChessApp<'a> {
         let friendly_positions = &positions[(self.turn == Color::Black) as usize];
         let opponent_positions = &positions[(self.turn == Color::White) as usize];
         self.possible_moves =
-            chosen_piece.get_piece_moves(friendly_positions, opponent_positions, &self.en_passant);
+            chosen_piece.get_piece_moves(friendly_positions, opponent_positions, &self.en_passant, &self.board);
     }
 
     fn set_values_at_the_end_of_turn(&mut self) {

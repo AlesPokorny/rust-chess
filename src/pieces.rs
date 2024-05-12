@@ -2,7 +2,7 @@ use crate::board::Board;
 use crate::helpers::Position;
 use crate::moves::{
     get_bishop_moves, get_king_moves, get_knight_moves, get_pawn_moves, get_queen_moves,
-    get_rook_moves,
+    get_rook_moves, filter_check_moves
 };
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -59,8 +59,9 @@ impl Piece {
         friendly_positions: &[Position],
         opponent_positions: &[Position],
         en_passant: &Option<Position>,
+        board: &Board,
     ) -> Vec<Position> {
-        match self.kind {
+        let all_moves = match self.kind {
             PieceKind::P => get_pawn_moves(
                 &self.position,
                 &self.has_moved,
@@ -76,11 +77,9 @@ impl Piece {
             }
             PieceKind::Q => get_queen_moves(&self.position, friendly_positions, opponent_positions),
             PieceKind::K => get_king_moves(&self.position, friendly_positions),
-        }
-    }
+        };
 
-    fn filter_check_moves(moves: &Vec<Position>, mut board: Board) {
-        for piece_move in moves {}
+        filter_check_moves(self.position, all_moves, board, self.clone())
     }
 }
 
