@@ -403,7 +403,7 @@ mod test_moves {
         let output = get_pawn_moves(
             &position,
             &false,
-            &vec![Position::new(1, 2)],
+            &[Position::new(1, 2)],
             &Vec::new(),
             1,
             &None,
@@ -419,7 +419,7 @@ mod test_moves {
             &position,
             &false,
             &Vec::new(),
-            &vec![Position::new(1, 2)],
+            &[Position::new(1, 2)],
             1,
             &None,
         );
@@ -434,11 +434,9 @@ mod test_moves {
             &position,
             &false,
             &Vec::new(),
-            &vec![
-                Position::new(1, 2),
+            &[Position::new(1, 2),
                 Position::new(0, 2),
-                Position::new(2, 2),
-            ],
+                Position::new(2, 2)],
             1,
             &None,
         );
@@ -453,7 +451,7 @@ mod test_moves {
             &position,
             &false,
             &Vec::new(),
-            &vec![Position::new(0, 1)],
+            &[Position::new(0, 1)],
             1,
             &Some(Position::new(0, 2)),
         );
@@ -479,11 +477,9 @@ mod test_moves {
 
         let output = get_king_moves(
             &position,
-            &vec![
-                Position::new(1, 2),
+            &[Position::new(1, 2),
                 Position::new(4, 5),
-                Position::new(3, 3),
-            ],
+                Position::new(3, 3)],
         );
 
         assert_eq!(expected_output, output);

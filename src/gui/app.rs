@@ -55,7 +55,7 @@ impl<'a> App for ChessApp<'a> {
                                 println!("Checkmate!");
                                 exit(0);
                             }
-                            sleep(Duration::from_secs_f32(0.05));
+                            sleep(Duration::from_secs_f32(0.1));
                         } else {
                             self.select_piece_and_update_moves(&click_position);
                         }
