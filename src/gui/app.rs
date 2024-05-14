@@ -41,7 +41,7 @@ impl<'a> App for ChessApp<'a> {
             self.check_window_size(ctx);
             self.draw_board_with_pieces(ui);
             self.draw_move_selection(ui);
-            
+
             if let Some(pos) = ctx.input(|i| i.pointer.press_origin()) {
                 let click_position =
                     convert_click_to_board_position(pos, self.board.turn, self.square_size);
@@ -74,7 +74,7 @@ impl<'a> ChessApp<'a> {
         let size = f32::min(ctx.screen_rect().width(), ctx.screen_rect().height());
         self.square_size = size / 8.;
     }
-    
+
     fn draw_board_with_pieces(&self, ui: &mut Ui) {
         for row in 0..8 {
             for col in 0..8 {
@@ -123,7 +123,8 @@ impl<'a> ChessApp<'a> {
         }
 
         for position in &self.possible_moves {
-            let move_pos = convert_board_position_to_ui(position, self.board.turn, self.square_size);
+            let move_pos =
+                convert_board_position_to_ui(position, self.board.turn, self.square_size);
             let move_dot = Shape::circle_filled(
                 Pos2::new(
                     move_pos.x + (self.square_size / 2.),
@@ -161,11 +162,8 @@ impl<'a> ChessApp<'a> {
         let positions = self.board.get_all_positions();
         let friendly_positions = &positions[(self.board.turn == Color::Black) as usize];
         let opponent_positions = &positions[(self.board.turn == Color::White) as usize];
-        self.possible_moves = chosen_piece.get_piece_moves(
-            friendly_positions,
-            opponent_positions,
-            &self.board,
-        );
+        self.possible_moves =
+            chosen_piece.get_piece_moves(friendly_positions, opponent_positions, &self.board);
     }
 
     fn set_values_at_the_end_of_turn(&mut self) {
@@ -192,7 +190,9 @@ impl<'a> ChessApp<'a> {
 
         // update king position
         if piece_kind == PieceKind::K {
-            self.board.king_positions[(self.board.turn == Color::Black) as usize] = to_position;
+            self.board
+                .king_positions
+                .insert(self.board.turn, to_position);
         }
 
         if was_en_passant_played(&piece_kind, &to_position, &self.board.en_passant) {

@@ -3,7 +3,7 @@ use crate::pieces::PieceKind;
 
 use std::io;
 
-pub fn chess_coord_to_array_coord(coord: String) -> Option<Position> {
+pub fn chess_coord_to_position(coord: String) -> Option<Position> {
     if coord.trim().chars().count() != 2 {
         return None;
     }
@@ -21,7 +21,7 @@ pub fn get_user_input(message: &str) -> Option<Position> {
         .read_line(&mut from_input)
         .expect("Failed to read line");
 
-    chess_coord_to_array_coord(from_input)
+    chess_coord_to_position(from_input)
 }
 
 pub fn get_en_passant(
@@ -56,13 +56,13 @@ pub fn was_en_passant_played(
 mod test_board {
     use crate::helpers::Position;
     use crate::pieces::PieceKind;
-    use crate::utils::{chess_coord_to_array_coord, get_en_passant};
+    use crate::utils::{chess_coord_to_position, get_en_passant};
 
     #[test]
     fn test_chess_coord_to_array_coord() {
         assert_eq!(
             Position::get_valid_position(6, 2),
-            chess_coord_to_array_coord(String::from("b3"))
+            chess_coord_to_position(String::from("b3"))
         );
     }
 

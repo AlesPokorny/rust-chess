@@ -1,13 +1,18 @@
 use crate::helpers::Position;
 use crate::pieces::{Color, Piece, PieceKind};
-use crate::utils::chess_coord_to_array_coord;
+use crate::utils::chess_coord_to_position;
 
-#[derive(Clone, Copy, Debug)]
+use std::collections::HashMap;
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct Board {
     pub board: [[Option<Piece>; 8]; 8],
-    pub king_positions: [Position; 2],
+    pub king_positions: HashMap<Color, Position>,
     pub turn: Color,
     pub en_passant: Option<Position>,
+    pub castling: HashMap<Color, [bool; 2]>,
+    pub n_half_moves: u16,
+    pub n_full_moves: u16,
 }
 
 impl Board {
@@ -34,31 +39,27 @@ impl Board {
                 [None, None, None, None, None, None, None, None],
                 [None, None, None, None, None, None, None, None],
             ],
-            king_positions: [
-                chess_coord_to_array_coord(String::from("e1")).unwrap(),
-                chess_coord_to_array_coord(String::from("e8")).unwrap(),
-            ],
+            king_positions: HashMap::from([
+                (
+                    Color::White,
+                    chess_coord_to_position(String::from("e1")).unwrap(),
+                ),
+                (
+                    Color::Black,
+                    chess_coord_to_position(String::from("e8")).unwrap(),
+                ),
+            ]),
             turn: Color::White,
             en_passant: None,
+            castling: HashMap::from([(Color::White, [true, true]), (Color::Black, [true, true])]),
+            n_half_moves: 0_u16,
+            n_full_moves: 1_u16,
         };
 
         for (row_i, row) in temp_board.iter().enumerate() {
             for (col_i, field) in row.iter().enumerate() {
                 if field != &' ' {
-                    let piece_kind = match field.to_ascii_lowercase() {
-                        'r' => PieceKind::R,
-                        'n' => PieceKind::N,
-                        'b' => PieceKind::B,
-                        'q' => PieceKind::Q,
-                        'k' => PieceKind::K,
-                        'p' => PieceKind::P,
-                        _ => panic!("Unexpected piece"),
-                    };
-                    let color = if field.is_lowercase() {
-                        Color::Black
-                    } else {
-                        Color::White
-                    };
+                    let (piece_kind, color) = Piece::get_piece_kind_and_color(field);
                     let position = Position::new(col_i, row_i);
 
                     result_board.board[col_i][row_i] = Some(Piece::new(color, piece_kind, position))
@@ -140,10 +141,7 @@ impl Board {
         [white, black]
     }
 
-    pub fn get_all_moves_of_color(
-        &self,
-        color: Color,
-    ) -> Vec<Position> {
+    pub fn get_all_moves_of_color(&self, color: Color) -> Vec<Position> {
         let color_index: usize;
         let opponent_index: usize;
         if color == Color::White {
@@ -161,8 +159,7 @@ impl Board {
 
         let mut all_moves: Vec<Position> = Vec::new();
         for piece in color_pieces {
-            let piece_moves =
-                piece.get_piece_moves(friendly_positions, opponent_positions, self);
+            let piece_moves = piece.get_piece_moves(friendly_positions, opponent_positions, self);
             all_moves.extend(piece_moves);
         }
         all_moves
@@ -187,13 +184,102 @@ impl Board {
         let opponent_positions = &all_positions[(self.turn != Color::Black) as usize];
         let friendly_pieces = &all_pieces[(self.turn == Color::Black) as usize];
         for piece in friendly_pieces {
-            let moves =
-                piece.get_piece_moves(friendly_positions, opponent_positions, self);
+            let moves = piece.get_piece_moves(friendly_positions, opponent_positions, self);
             if !moves.is_empty() {
                 return false;
             }
         }
         true
+    }
+
+    pub fn from_fen(fen: &str) -> Board {
+        let fen_parts: Vec<&str> = fen.split(' ').collect();
+        let board_pieces = fen_parts[0]
+            .split('/')
+            .collect::<Vec<&str>>()
+            .into_iter()
+            .rev();
+
+        let mut board: [[Option<Piece>; 8]; 8] = [
+            [None, None, None, None, None, None, None, None],
+            [None, None, None, None, None, None, None, None],
+            [None, None, None, None, None, None, None, None],
+            [None, None, None, None, None, None, None, None],
+            [None, None, None, None, None, None, None, None],
+            [None, None, None, None, None, None, None, None],
+            [None, None, None, None, None, None, None, None],
+            [None, None, None, None, None, None, None, None],
+        ];
+
+        let mut king_positions: HashMap<Color, Position> = HashMap::new();
+
+        for (y, row) in board_pieces.enumerate() {
+            let mut x: usize = 0;
+            for fen_char in row.chars().rev() {
+                let fen_char_digit = fen_char as usize;
+
+                if (48..=56).contains(&fen_char_digit) {
+                    let n_empty_spaces = fen_char_digit - '0' as usize;
+                    x += n_empty_spaces
+                } else {
+                    let (piece_kind, piece_color) = Piece::get_piece_kind_and_color(&fen_char);
+                    let position = Position::new(x, y);
+                    board[x][y] = Some(Piece::new(piece_color, piece_kind, position));
+                    if piece_kind == PieceKind::K {
+                        king_positions.insert(piece_color, position);
+                    }
+                    x += 1;
+                }
+            }
+        }
+
+        let turn = if fen_parts[1] == "w" {
+            Color::White
+        } else {
+            Color::Black
+        };
+
+        let castling_str = fen_parts[2];
+        let castling: HashMap<Color, [bool; 2]> = if castling_str == "-" {
+            HashMap::from([
+                (Color::White, [false, false]),
+                (Color::Black, [false, false]),
+            ])
+        } else {
+            let mut white = [false, false];
+            let mut black = [false, false];
+
+            for castling_char in castling_str.chars() {
+                let i: usize = if castling_char.to_ascii_lowercase() == 'k' {
+                    0
+                } else {
+                    1
+                };
+
+                if castling_char.is_lowercase() {
+                    black[i] = true;
+                } else {
+                    white[i] = true;
+                };
+            }
+            HashMap::from([(Color::White, white), (Color::Black, black)])
+        };
+
+        // TODO: castling
+        let en_passant = chess_coord_to_position(String::from(fen_parts[3]));
+
+        let n_half_moves = fen_parts[4].parse::<u16>().unwrap();
+        let n_full_moves = fen_parts[5].parse::<u16>().unwrap();
+
+        Board {
+            board,
+            king_positions,
+            turn,
+            en_passant,
+            castling,
+            n_half_moves,
+            n_full_moves,
+        }
     }
 }
 
@@ -218,5 +304,13 @@ mod test_board {
             Some(_) => assert!(false),
             None => assert!(true),
         }
+    }
+
+    #[test]
+    fn test_from_fen_new_game() {
+        let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        let board = Board::from_fen(fen);
+
+        assert_eq!(board, Board::new())
     }
 }

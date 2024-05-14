@@ -21,7 +21,7 @@ pub enum PieceKind {
     Q,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Piece {
     pub color: Color,
     pub kind: PieceKind,
@@ -79,6 +79,24 @@ impl Piece {
         };
 
         filter_check_moves(self.position, all_moves, board, *self)
+    }
+
+    pub fn get_piece_kind_and_color(piece_char: &char) -> (PieceKind, Color) {
+        let piece_kind = match piece_char.to_ascii_lowercase() {
+            'r' => PieceKind::R,
+            'n' => PieceKind::N,
+            'b' => PieceKind::B,
+            'q' => PieceKind::Q,
+            'k' => PieceKind::K,
+            'p' => PieceKind::P,
+            _ => panic!("Unexpected piece"),
+        };
+        let color = if piece_char.is_lowercase() {
+            Color::Black
+        } else {
+            Color::White
+        };
+        (piece_kind, color)
     }
 }
 

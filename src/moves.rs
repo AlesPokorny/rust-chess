@@ -235,7 +235,8 @@ pub fn is_field_in_check(field_position: Position, board: Board) -> bool {
         .map(|positions_in_direction| positions_in_direction.last());
     for last_rook_move in last_rook_moves.into_iter().flatten() {
         if let Some(piece) = board.get_piece_from_position(last_rook_move) {
-            if (piece.color != board.turn) & ((piece.kind == PieceKind::R) | (piece.kind == PieceKind::Q))
+            if (piece.color != board.turn)
+                & ((piece.kind == PieceKind::R) | (piece.kind == PieceKind::Q))
             {
                 return true;
             }
@@ -255,7 +256,8 @@ pub fn is_field_in_check(field_position: Position, board: Board) -> bool {
         .collect();
     for last_bishop_move in last_bishop_moves.into_iter().flatten() {
         if let Some(piece) = board.get_piece_from_position(last_bishop_move) {
-            if (piece.color != board.turn) & ((piece.kind == PieceKind::B) | (piece.kind == PieceKind::Q))
+            if (piece.color != board.turn)
+                & ((piece.kind == PieceKind::B) | (piece.kind == PieceKind::Q))
             {
                 return true;
             }
@@ -293,7 +295,7 @@ pub fn filter_check_moves(
     let mut filtered_moves: Vec<Position> = Vec::new();
 
     for to_position in to_positions {
-        let mut temp_board = *board;
+        let mut temp_board = board.clone();
         let moved_piece = match &mut temp_board.board[from_position.x][from_position.y] {
             Some(moved_piece) => moved_piece,
             None => panic!("Oops, you done goofed"),
@@ -303,7 +305,7 @@ pub fn filter_check_moves(
         let king_position = if piece.kind == PieceKind::K {
             to_position
         } else {
-            temp_board.king_positions[(board.turn == Color::Black) as usize]
+            temp_board.king_positions[&board.turn]
         };
 
         let is_check = is_field_in_check(king_position, temp_board);
@@ -434,9 +436,11 @@ mod test_moves {
             &position,
             &false,
             &Vec::new(),
-            &[Position::new(1, 2),
+            &[
+                Position::new(1, 2),
                 Position::new(0, 2),
-                Position::new(2, 2)],
+                Position::new(2, 2),
+            ],
             1,
             &None,
         );
@@ -477,9 +481,11 @@ mod test_moves {
 
         let output = get_king_moves(
             &position,
-            &[Position::new(1, 2),
+            &[
+                Position::new(1, 2),
                 Position::new(4, 5),
-                Position::new(3, 3)],
+                Position::new(3, 3),
+            ],
         );
 
         assert_eq!(expected_output, output);
