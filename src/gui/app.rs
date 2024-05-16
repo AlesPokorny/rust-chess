@@ -2,6 +2,7 @@ use crate::board::Board;
 use crate::gui::utils::*;
 use crate::helpers::Position;
 use crate::pieces::{Color, Piece, PieceKind};
+use crate::moves::get_rook_old_and_new_castling_positions;
 
 use crate::utils::{get_en_passant, was_en_passant_played};
 
@@ -151,6 +152,7 @@ impl<'a> ChessApp<'a> {
         if let Some(piece) = piece_option {
             if piece.color == self.board.turn {
                 self.chosen_piece = Some(*piece);
+                println!("{:?}", piece.position);
                 return Some(*piece);
             }
         }
@@ -182,6 +184,7 @@ impl<'a> ChessApp<'a> {
 
         // can we make this bit better? use the self.chosen_piece as mutable reference
         // so we dont have to dig it out again?
+        // only if I knew how...
         let piece_to_move = match &mut self.board.board[old_position.x][old_position.y] {
             Some(piece_to_move) => piece_to_move,
             None => panic!("Oh no! There should be a piece at this position."),
@@ -193,8 +196,26 @@ impl<'a> ChessApp<'a> {
             self.board
                 .king_positions
                 .insert(self.board.turn, to_position);
-        }
+            if old_position.x.abs_diff(to_position.x) == 2 {
+                let (old_rook_position, new_rook_position) = get_rook_old_and_new_castling_positions(&to_position);
 
+                let rook_to_move = match &mut self.board.board[old_rook_position.x][old_rook_position.y] {
+                    Some(rook_to_move) => rook_to_move,
+                    None => panic!("Oh no! There should be a piece at this position."),
+                };
+
+                rook_to_move.move_piece(new_rook_position);
+                self.board.move_piece(&old_rook_position, &new_rook_position);
+            }
+            self.board.castling.insert(self.board.turn, [false, false]);
+        }
+        let castling = self.board.castling[&self.board.turn];
+        let is_rook = piece_kind == PieceKind::R;
+        let new_castling = [
+            castling[0] & !((is_rook) & (old_position.x == 0)),
+            castling[1] & !((is_rook) & (old_position.x == 7)),
+        ];
+        if castling != new_castling { self.board.castling.insert(self.board.turn, new_castling); }
         if was_en_passant_played(&piece_kind, &to_position, &self.board.en_passant) {
             self.board
                 .remove_piece(&Position::new(to_position.x, old_position.y));

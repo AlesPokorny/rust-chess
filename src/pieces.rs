@@ -75,7 +75,7 @@ impl Piece {
                 get_bishop_moves(&self.position, friendly_positions, opponent_positions)
             }
             PieceKind::Q => get_queen_moves(&self.position, friendly_positions, opponent_positions),
-            PieceKind::K => get_king_moves(&self.position, friendly_positions),
+            PieceKind::K => get_king_moves(&self.position, board, friendly_positions),
         };
 
         filter_check_moves(self.position, all_moves, board, *self)

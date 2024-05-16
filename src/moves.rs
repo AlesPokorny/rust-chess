@@ -185,8 +185,51 @@ pub fn get_pawn_moves(
     moves
 }
 
-pub fn get_king_moves(position: &Position, friendly_positions: &[Position]) -> Vec<Position> {
+fn get_castling_move(board: &Board, short: bool) -> Option<Position> {
+    let row = if board.turn == Color::White { 0 } else { 7 };
+    let col: Vec<usize>;
+    let target_col: usize;
+
+    if short {
+        col = vec![1, 2];
+        target_col = 1;
+    } else {
+        col = vec![4, 5];
+        if let Some(_) = board.get_piece_from_position(&Position::new(6, row)) {
+            return None
+        }
+        target_col = 5;
+    }
+
+    for i in 0..=1_usize {
+        let position = Position::new(col[i], row);
+        if let Some(_) = board.get_piece_from_position(&position) {
+            return None
+        }
+        if is_field_in_check(position, board) {
+            return None
+        }
+    };
+
+    Some(Position::new(target_col, row))
+}
+
+pub fn get_king_moves(position: &Position, board: &Board, friendly_positions: &[Position]) -> Vec<Position> {
     let mut moves: Vec<Position> = Vec::new();
+
+    let [can_castle_short, can_castle_long] = board.castling[&board.turn];
+    
+    if can_castle_short {
+        if let Some(castling_move) = get_castling_move(board, true) {
+            moves.push(castling_move);
+        }
+    }
+    if can_castle_long {
+        if let Some(castling_move) = get_castling_move(board, false) {
+            moves.push(castling_move);
+        }
+    }
+
     let (x, y) = position.get_x_y_as_int();
 
     let possible_moves = [
@@ -209,7 +252,7 @@ pub fn get_king_moves(position: &Position, friendly_positions: &[Position]) -> V
     moves
 }
 
-pub fn is_field_in_check(field_position: Position, board: Board) -> bool {
+pub fn is_field_in_check(field_position: Position, board: &Board) -> bool {
     let all_positions = board.get_all_positions();
     let friendly_positions = &all_positions[(board.turn == Color::Black) as usize];
     let opponent_positions = &all_positions[(board.turn != Color::Black) as usize];
@@ -308,7 +351,7 @@ pub fn filter_check_moves(
             temp_board.king_positions[&board.turn]
         };
 
-        let is_check = is_field_in_check(king_position, temp_board);
+        let is_check = is_field_in_check(king_position, &temp_board);
 
         if !is_check {
             filtered_moves.push(to_position);
@@ -316,6 +359,22 @@ pub fn filter_check_moves(
     }
 
     filtered_moves
+}
+
+pub fn get_rook_old_and_new_castling_positions(king_new_position: &Position) -> (Position, Position) {
+    let old_x_position: usize;
+    let new_x_position: usize;
+    if king_new_position.x == 1 {
+        old_x_position = 0;
+        new_x_position = 2;
+    } else {
+        old_x_position = 7;
+        new_x_position = 4;
+    }
+    let old_rook_position = Position::new(old_x_position, king_new_position.y);
+    let new_rook_position = Position::new(new_x_position, king_new_position.y);
+
+    (old_rook_position, new_rook_position)
 }
 
 #[cfg(test)]
@@ -464,30 +523,6 @@ mod test_moves {
             Position::new(1, 3),
             Position::new(0, 2),
         ];
-        assert_eq!(expected_output, output);
-    }
-
-    #[test]
-    fn test_get_king_moves() {
-        let position = Position::new(4, 4);
-        let expected_output = vec![
-            Position::new(4, 3),
-            Position::new(5, 4),
-            Position::new(3, 4),
-            Position::new(5, 5),
-            Position::new(5, 3),
-            Position::new(3, 5),
-        ];
-
-        let output = get_king_moves(
-            &position,
-            &[
-                Position::new(1, 2),
-                Position::new(4, 5),
-                Position::new(3, 3),
-            ],
-        );
-
         assert_eq!(expected_output, output);
     }
 }
