@@ -195,30 +195,37 @@ fn get_castling_move(board: &Board, short: bool) -> Option<Position> {
         target_col = 1;
     } else {
         col = vec![4, 5];
-        if let Some(_) = board.get_piece_from_position(&Position::new(6, row)) {
-            return None
+        if board
+            .get_piece_from_position(&Position::new(6, row))
+            .is_some()
+        {
+            return None;
         }
         target_col = 5;
     }
 
-    for i in 0..=1_usize {
-        let position = Position::new(col[i], row);
-        if let Some(_) = board.get_piece_from_position(&position) {
-            return None
+    for x in col {
+        let position = Position::new(x, row);
+        if board.get_piece_from_position(&position).is_some() {
+            return None;
         }
         if is_field_in_check(position, board) {
-            return None
+            return None;
         }
-    };
+    }
 
     Some(Position::new(target_col, row))
 }
 
-pub fn get_king_moves(position: &Position, board: &Board, friendly_positions: &[Position]) -> Vec<Position> {
+pub fn get_king_moves(
+    position: &Position,
+    board: &Board,
+    friendly_positions: &[Position],
+) -> Vec<Position> {
     let mut moves: Vec<Position> = Vec::new();
 
     let [can_castle_short, can_castle_long] = board.castling[&board.turn];
-    
+
     if can_castle_short {
         if let Some(castling_move) = get_castling_move(board, true) {
             moves.push(castling_move);
@@ -361,7 +368,9 @@ pub fn filter_check_moves(
     filtered_moves
 }
 
-pub fn get_rook_old_and_new_castling_positions(king_new_position: &Position) -> (Position, Position) {
+pub fn get_rook_old_and_new_castling_positions(
+    king_new_position: &Position,
+) -> (Position, Position) {
     let old_x_position: usize;
     let new_x_position: usize;
     if king_new_position.x == 1 {
@@ -380,7 +389,7 @@ pub fn get_rook_old_and_new_castling_positions(king_new_position: &Position) -> 
 #[cfg(test)]
 mod test_moves {
     use crate::helpers::{Direction, Position};
-    use crate::moves::{get_king_moves, get_knight_moves, get_pawn_moves, get_straight_moves};
+    use crate::moves::{get_knight_moves, get_pawn_moves, get_straight_moves};
 
     #[test]
     fn test_get_knight_moves() {
