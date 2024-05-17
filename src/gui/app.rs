@@ -55,11 +55,7 @@ impl<'a> App for ChessApp<'a> {
                         if self.possible_moves.contains(&click_position) {
                             self.bust_a_move(piece, click_position);
                             if self.promotion_position.is_none() {
-                                self.set_values_at_the_end_of_turn();
-                                if self.board.is_checkmate() {
-                                    println!("Checkmate!");
-                                    exit(0);
-                                }
+                                self.end_of_turn_ceremonies();
                             }
                             // The ui is so damn fast that without sleep, it uses the same click multiple times
                             sleep(Duration::from_secs_f32(0.1));
@@ -216,12 +212,7 @@ impl<'a> ChessApp<'a> {
                 let piece = pieces[promotion_position.y.abs_diff(click_position.y)];
                 self.board.board[promotion_position.x][promotion_position.y] = Some(piece);
                 self.promotion_position = None;
-                self.set_values_at_the_end_of_turn();
-
-                if self.board.is_checkmate() {
-                    println!("Checkmate!");
-                    exit(0);
-                }
+                self.end_of_turn_ceremonies();
             }
         }
     }
@@ -238,6 +229,9 @@ impl<'a> ChessApp<'a> {
             None => panic!("Oh no! There should be a piece at this position."),
         };
         piece_to_move.move_piece(to_position);
+
+        let is_capture = !self.board.get_piece_from_position(&to_position).is_none();
+        let reset_half_moves = is_capture | (piece_kind == PieceKind::P);
 
         // update king position
         if piece_kind == PieceKind::K {
@@ -278,5 +272,26 @@ impl<'a> ChessApp<'a> {
 
         self.board.en_passant = get_en_passant(&piece_kind, &old_position, &to_position);
         self.board.move_piece(&old_position, &to_position);
+        if reset_half_moves {
+            self.board.reset_half_move();
+        } else {
+            self.board.increase_half_move();
+        }
+
+        println!("N half moves: {}", self.board.n_half_moves);
+    }
+
+    fn end_of_turn_ceremonies(&mut self) {
+        self.set_values_at_the_end_of_turn();
+
+        if self.board.is_checkmate() {
+            println!("Checkmate!");
+            exit(0);
+        }
+
+        if self.board.n_half_moves >= 100 {
+            println!("Tis draw");
+            exit(0);
+        }
     }
 }
