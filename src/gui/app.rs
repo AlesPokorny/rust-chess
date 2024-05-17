@@ -19,6 +19,7 @@ pub struct ChessApp<'a> {
     square_size: f32,
     chosen_piece: Option<Piece>,
     possible_moves: Vec<Position>,
+    promotion_position: Option<Position>,
 }
 
 impl<'a> Default for ChessApp<'a> {
@@ -32,6 +33,7 @@ impl<'a> Default for ChessApp<'a> {
             square_size,
             chosen_piece: None,
             possible_moves: Vec::new(),
+            promotion_position: None,
         }
     }
 }
@@ -43,19 +45,23 @@ impl<'a> App for ChessApp<'a> {
             self.draw_board_with_pieces(ui);
             self.draw_move_selection(ui);
 
-            if let Some(pos) = ctx.input(|i| i.pointer.press_origin()) {
+            if let Some(promotion_position) = self.promotion_position {
+                self.do_promotion_stuff(promotion_position, ui, ctx);
+            } else if let Some(pos) = ctx.input(|i| i.pointer.press_origin()) {
                 let click_position =
                     convert_click_to_board_position(pos, self.board.turn, self.square_size);
                 match self.chosen_piece {
                     Some(piece) => {
                         if self.possible_moves.contains(&click_position) {
                             self.bust_a_move(piece, click_position);
-                            self.set_values_at_the_end_of_turn();
-                            // The ui is so damn fast that without sleep, it uses the same click multiple times
-                            if self.board.is_checkmate() {
-                                println!("Checkmate!");
-                                exit(0);
+                            if self.promotion_position.is_none() {
+                                self.set_values_at_the_end_of_turn();
+                                if self.board.is_checkmate() {
+                                    println!("Checkmate!");
+                                    exit(0);
+                                }
                             }
+                            // The ui is so damn fast that without sleep, it uses the same click multiple times
                             sleep(Duration::from_secs_f32(0.1));
                         } else {
                             self.select_piece_and_update_moves(&click_position);
@@ -178,6 +184,48 @@ impl<'a> ChessApp<'a> {
         self.possible_moves = Vec::new();
     }
 
+    fn do_promotion_stuff(&mut self, promotion_position: Position, ui: &mut Ui, ctx: &Context) {
+        let ui_pos =
+            convert_board_position_to_ui(&promotion_position, self.board.turn, self.square_size);
+        let pieces = [
+            Piece::new(self.board.turn, PieceKind::Q, promotion_position),
+            Piece::new(self.board.turn, PieceKind::R, promotion_position),
+            Piece::new(self.board.turn, PieceKind::N, promotion_position),
+            Piece::new(self.board.turn, PieceKind::B, promotion_position),
+        ];
+
+        for (i, piece) in pieces.iter().enumerate() {
+            let rect_starting_y = ui_pos.y + (i as f32) * self.square_size;
+            let rect = Rect::from_min_size(
+                Pos2::new(ui_pos.x, rect_starting_y),
+                Vec2::new(self.square_size, self.square_size),
+            );
+
+            let square = make_square(rect, Color32::from_rgb(255, 255, 255), true);
+            ui.painter().add(square);
+            let piece_image = self.piece_images.get(&(piece.kind, piece.color)).unwrap();
+            piece_image.paint_at(ui, rect);
+        }
+        if let Some(click_pos) = ctx.input(|i| i.pointer.press_origin()) {
+            let click_position =
+                convert_click_to_board_position(click_pos, self.board.turn, self.square_size);
+
+            if (promotion_position.x == click_position.x)
+                & (promotion_position.y.abs_diff(click_position.y) <= 3)
+            {
+                let piece = pieces[promotion_position.y.abs_diff(click_position.y)];
+                self.board.board[promotion_position.x][promotion_position.y] = Some(piece);
+                self.promotion_position = None;
+                self.set_values_at_the_end_of_turn();
+
+                if self.board.is_checkmate() {
+                    println!("Checkmate!");
+                    exit(0);
+                }
+            }
+        }
+    }
+
     fn bust_a_move(&mut self, piece: Piece, to_position: Position) {
         let old_position = piece.position;
         let piece_kind = piece.kind;
@@ -211,6 +259,8 @@ impl<'a> ChessApp<'a> {
                     .move_piece(&old_rook_position, &new_rook_position);
             }
             self.board.castling.insert(self.board.turn, [false, false]);
+        } else if (piece_kind == PieceKind::P) & ((to_position.y == 0) | (to_position.y == 7)) {
+            self.promotion_position = Some(to_position);
         }
         let castling = self.board.castling[&self.board.turn];
         let is_rook = piece_kind == PieceKind::R;
