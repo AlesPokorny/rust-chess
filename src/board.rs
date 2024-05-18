@@ -3,6 +3,7 @@ use crate::pieces::{Color, Piece, PieceKind};
 use crate::utils::chess_coord_to_position;
 
 use std::collections::HashMap;
+use std::io::Error;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Board {
@@ -192,13 +193,24 @@ impl Board {
         true
     }
 
-    pub fn from_fen(fen: &str) -> Board {
+    pub fn from_fen(fen: &str) -> Result<Board, Error> {
         let fen_parts: Vec<&str> = fen.split(' ').collect();
-        let board_pieces = fen_parts[0]
+
+        let invalid_fen_error = Error::new(std::io::ErrorKind::InvalidInput, "Invalid FEN string");
+
+        if fen_parts.len() != 6 {
+            return Err(invalid_fen_error);
+        }
+        let board_pieces: Vec<&str> = fen_parts[0]
             .split('/')
             .collect::<Vec<&str>>()
             .into_iter()
-            .rev();
+            .rev()
+            .collect();
+
+        if board_pieces.len() != 8 {
+            return Err(invalid_fen_error);
+        }
 
         let mut board: [[Option<Piece>; 8]; 8] = [
             [None, None, None, None, None, None, None, None],
@@ -213,15 +225,21 @@ impl Board {
 
         let mut king_positions: HashMap<Color, Position> = HashMap::new();
 
-        for (y, row) in board_pieces.enumerate() {
+        for (y, row) in board_pieces.iter().enumerate() {
             let mut x: usize = 0;
             for fen_char in row.chars().rev() {
+                if (x > 7) | (y > 7) {
+                    return Err(invalid_fen_error);
+                }
                 let fen_char_digit = fen_char as usize;
 
                 if (48..=56).contains(&fen_char_digit) {
                     let n_empty_spaces = fen_char_digit - '0' as usize;
                     x += n_empty_spaces
                 } else {
+                    if !['p', 'r', 'n', 'b', 'k', 'q'].contains(&fen_char.to_ascii_lowercase()) {
+                        return Err(invalid_fen_error);
+                    }
                     let (piece_kind, piece_color) = Piece::get_piece_kind_and_color(&fen_char);
                     let position = Position::new(x, y);
                     board[x][y] = Some(Piece::new(piece_color, piece_kind, position));
@@ -235,8 +253,10 @@ impl Board {
 
         let turn = if fen_parts[1] == "w" {
             Color::White
-        } else {
+        } else if fen_parts[1] == "b" {
             Color::Black
+        } else {
+            return Err(invalid_fen_error);
         };
 
         let castling_str = fen_parts[2];
@@ -252,8 +272,10 @@ impl Board {
             for castling_char in castling_str.chars() {
                 let i: usize = if castling_char.to_ascii_lowercase() == 'k' {
                     0
-                } else {
+                } else if castling_char.to_ascii_lowercase() == 'q' {
                     1
+                } else {
+                    return Err(invalid_fen_error);
                 };
 
                 if castling_char.is_lowercase() {
@@ -268,10 +290,15 @@ impl Board {
         // TODO: castling
         let en_passant = chess_coord_to_position(String::from(fen_parts[3]));
 
-        let n_half_moves = fen_parts[4].parse::<u16>().unwrap();
-        let n_full_moves = fen_parts[5].parse::<u16>().unwrap();
-
-        Board {
+        let n_half_moves = match fen_parts[4].parse::<u16>() {
+            Ok(x) => x,
+            Err(_) => return Err(invalid_fen_error),
+        };
+        let n_full_moves = match fen_parts[5].parse::<u16>() {
+            Ok(x) => x,
+            Err(_) => return Err(invalid_fen_error),
+        };
+        Ok(Board {
             board,
             king_positions,
             turn,
@@ -279,7 +306,7 @@ impl Board {
             castling,
             n_half_moves,
             n_full_moves,
-        }
+        })
     }
 
     pub fn increase_half_move(&mut self) {
@@ -319,6 +346,6 @@ mod test_board {
         let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         let board = Board::from_fen(fen);
 
-        assert_eq!(board, Board::new())
+        assert_eq!(board.unwrap(), Board::new())
     }
 }

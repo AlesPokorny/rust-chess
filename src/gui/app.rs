@@ -6,8 +6,10 @@ use crate::pieces::{Color, Piece, PieceKind};
 
 use crate::utils::{get_en_passant, was_en_passant_played};
 
-use eframe::egui::{CentralPanel, Color32, Context, Image, Pos2, Rect, Shape, Ui, Vec2};
-use eframe::{App, Frame};
+use eframe::egui::{
+    self, Button, CentralPanel, Color32, Context, Image, Pos2, Rect, Shape, Ui, Vec2,
+};
+use eframe::{self, App, Frame};
 use std::collections::HashMap;
 use std::process::exit;
 use std::thread::sleep;
@@ -16,10 +18,15 @@ use std::time::Duration;
 pub struct ChessApp<'a> {
     piece_images: HashMap<(PieceKind, Color), Image<'a>>,
     board: Board,
+    window_size: f32,
     square_size: f32,
     chosen_piece: Option<Piece>,
     possible_moves: Vec<Position>,
     promotion_position: Option<Position>,
+    in_menu: bool,
+    in_from_fen: bool,
+    font_size: f32,
+    fen_string: String,
 }
 
 impl<'a> Default for ChessApp<'a> {
@@ -30,41 +37,59 @@ impl<'a> Default for ChessApp<'a> {
         ChessApp {
             piece_images: init_assets(square_size),
             board: Board::new(),
+            window_size: size,
             square_size,
             chosen_piece: None,
             possible_moves: Vec::new(),
             promotion_position: None,
+            in_menu: true,
+            in_from_fen: false,
+            font_size: size / 20.,
+            fen_string: String::from(""),
         }
     }
 }
 
 impl<'a> App for ChessApp<'a> {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
-        CentralPanel::default().show(ctx, |ui| {
-            self.check_window_size(ctx);
-            self.draw_board_with_pieces(ui);
-            self.draw_move_selection(ui);
+        let my_frame = egui::containers::Frame::default().fill(Color32::from_rgb(165, 82, 42));
 
-            if let Some(promotion_position) = self.promotion_position {
-                self.do_promotion_stuff(promotion_position, ui, ctx);
-            } else if let Some(pos) = ctx.input(|i| i.pointer.press_origin()) {
-                let click_position =
-                    convert_click_to_board_position(pos, self.board.turn, self.square_size);
-                match self.chosen_piece {
-                    Some(piece) => {
-                        if self.possible_moves.contains(&click_position) {
-                            self.bust_a_move(piece, click_position);
-                            if self.promotion_position.is_none() {
-                                self.end_of_turn_ceremonies();
+        CentralPanel::default().frame(my_frame).show(ctx, |ui| {
+            self.check_window_size(ctx);
+            ui.style_mut().text_styles.insert(
+                egui::TextStyle::Button,
+                egui::FontId::new(self.font_size, eframe::epaint::FontFamily::Proportional),
+            );
+
+            if self.in_menu {
+                self.draw_menu(ui);
+            } else if self.in_from_fen {
+                self.draw_from_fen(ui);
+            } else {
+                self.draw_board_with_pieces(ui);
+                self.draw_move_selection(ui);
+
+                if let Some(promotion_position) = self.promotion_position {
+                    self.do_promotion_stuff(promotion_position, ui, ctx);
+                } else if let Some(pos) = ctx.input(|i| i.pointer.press_origin()) {
+                    let click_position =
+                        convert_click_to_board_position(pos, self.board.turn, self.square_size);
+                    match self.chosen_piece {
+                        Some(piece) => {
+                            if self.possible_moves.contains(&click_position) {
+                                self.bust_a_move(piece, click_position);
+                                if self.promotion_position.is_none() {
+                                    self.end_of_turn_ceremonies();
+                                }
+                                // The ui is so damn fast that without sleep, it uses the same click multiple times
+                                sleep(Duration::from_secs_f32(0.1));
+                            } else {
+                                self.select_piece_and_update_moves(&click_position);
                             }
-                            // The ui is so damn fast that without sleep, it uses the same click multiple times
-                            sleep(Duration::from_secs_f32(0.1));
-                        } else {
+                        }
+                        None => {
                             self.select_piece_and_update_moves(&click_position);
                         }
-                    }
-                    None => {
-                        self.select_piece_and_update_moves(&click_position);
                     }
                 }
             }
@@ -74,8 +99,82 @@ impl<'a> App for ChessApp<'a> {
 
 impl<'a> ChessApp<'a> {
     fn check_window_size(&mut self, ctx: &Context) {
-        let size = f32::min(ctx.screen_rect().width(), ctx.screen_rect().height());
-        self.square_size = size / 8.;
+        let new_size = f32::min(ctx.screen_rect().width(), ctx.screen_rect().height());
+        if self.window_size != new_size {
+            self.window_size = new_size;
+            self.square_size = self.window_size / 8.;
+            self.font_size = self.window_size / 20.
+        };
+    }
+
+    fn draw_menu(&mut self, ui: &mut Ui) {
+        let rect_size = Vec2::new(self.window_size / 4., self.window_size / 10.);
+        let start_rect = Rect::from_center_size(
+            Pos2::new(self.window_size / 2., self.window_size / 6.),
+            rect_size,
+        );
+        let start_button = ui.put(start_rect, Button::new("Start"));
+
+        let start_from_fen_rect = Rect::from_center_size(
+            Pos2::new(self.window_size / 2., self.window_size * 2. / 6.),
+            rect_size,
+        );
+        let start_from_fen_button = ui.put(start_from_fen_rect, Button::new("Start from FEN"));
+
+        let options_rect = Rect::from_center_size(
+            Pos2::new(self.window_size / 2., self.window_size * 3. / 6.),
+            rect_size,
+        );
+        let options_button = ui.put(options_rect, Button::new("Options"));
+
+        let quit_rect = Rect::from_center_size(
+            Pos2::new(self.window_size / 2., self.window_size * 4. / 6.),
+            rect_size,
+        );
+        let quit_button = ui.put(quit_rect, Button::new("Quit"));
+
+        if start_button.clicked() {
+            self.in_menu = false;
+        } else if options_button.clicked() {
+        } else if start_from_fen_button.clicked() {
+            self.in_from_fen = true;
+            self.in_menu = false;
+        } else if quit_button.clicked() {
+            exit(0)
+        }
+    }
+
+    fn draw_from_fen(&mut self, ui: &mut Ui) {
+        ui.put(
+            Rect::from_center_size(
+                Pos2::new(self.window_size / 2., self.window_size / 2.),
+                Vec2::new(self.window_size / 1.5, self.window_size / 10.),
+            ),
+            egui::TextEdit::singleline(&mut self.fen_string),
+        );
+
+        let submit_button = ui.put(
+            Rect::from_center_size(
+                Pos2::new(
+                    self.window_size / 2.,
+                    self.window_size / 2. + self.window_size / 9.,
+                ),
+                Vec2::new(self.window_size / 5., self.window_size / 10.),
+            ),
+            Button::new("Submit"),
+        );
+
+        if ui.input(|i| i.key_pressed(egui::Key::Enter)) | submit_button.clicked() {
+            match Board::from_fen(self.fen_string.trim()) {
+                Ok(board) => {
+                    board.print_board(&board.turn);
+                    self.board = board;
+                    self.in_from_fen = false;
+                    self.in_menu = false;
+                }
+                Err(_) => println!("Invalid FEN string"),
+            };
+        }
     }
 
     fn draw_board_with_pieces(&self, ui: &mut Ui) {

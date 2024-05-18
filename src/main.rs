@@ -13,7 +13,9 @@ use eframe::egui;
 fn main() -> Result<(), eframe::Error> {
     let window_size = (400., 400.);
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size(window_size),
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size(window_size)
+            .with_min_inner_size(window_size),
         ..Default::default()
     };
 
