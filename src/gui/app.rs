@@ -7,7 +7,8 @@ use crate::pieces::{Color, Piece, PieceKind};
 use crate::utils::{get_en_passant, was_en_passant_played};
 
 use eframe::egui::{
-    self, Button, CentralPanel, Color32, Context, Image, Pos2, Rect, Shape, Ui, Vec2,
+    self, Align2, Button, CentralPanel, Color32, Context, Image, Layout, Pos2, Rect, RichText,
+    Shape, Ui, Vec2,
 };
 use eframe::{self, App, Frame};
 use std::collections::HashMap;
@@ -25,13 +26,17 @@ pub struct ChessApp<'a> {
     promotion_position: Option<Position>,
     in_menu: bool,
     in_from_fen: bool,
+    in_options: bool,
     font_size: f32,
     fen_string: String,
+    white_color: [f32; 3],
+    black_color: [f32; 3],
+    colors: [[f32; 3]; 2],
 }
 
 impl<'a> Default for ChessApp<'a> {
     fn default() -> ChessApp<'a> {
-        let size = 400.;
+        let size = 600.;
         let square_size = size / 8.;
 
         ChessApp {
@@ -44,18 +49,25 @@ impl<'a> Default for ChessApp<'a> {
             promotion_position: None,
             in_menu: true,
             in_from_fen: false,
+            in_options: false,
             font_size: size / 20.,
             fen_string: String::from(""),
+            white_color: [255., 228., 196.],
+            black_color: [165., 82., 42.],
+            colors: [[255., 228., 196.], [165., 82., 42.]],
         }
     }
 }
 
 impl<'a> App for ChessApp<'a> {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
-        let my_frame = egui::containers::Frame::default().fill(Color32::from_rgb(165, 82, 42));
+        ctx.used_rect().set_height(self.window_size);
+        ctx.screen_rect().set_width(self.window_size);
+
+        let my_frame = egui::containers::Frame::default().fill(Color32::from_rgb(100, 100, 100));
 
         CentralPanel::default().frame(my_frame).show(ctx, |ui| {
-            self.check_window_size(ctx);
+            ui.set_min_size(Vec2::new(self.window_size, self.window_size));
             ui.style_mut().text_styles.insert(
                 egui::TextStyle::Button,
                 egui::FontId::new(self.font_size, eframe::epaint::FontFamily::Proportional),
@@ -65,6 +77,8 @@ impl<'a> App for ChessApp<'a> {
                 self.draw_menu(ui);
             } else if self.in_from_fen {
                 self.draw_from_fen(ui);
+            } else if self.in_options {
+                self.draw_options(ui, ctx);
             } else {
                 self.draw_board_with_pieces(ui);
                 self.draw_move_selection(ui);
@@ -136,6 +150,8 @@ impl<'a> ChessApp<'a> {
         if start_button.clicked() {
             self.in_menu = false;
         } else if options_button.clicked() {
+            self.in_menu = false;
+            self.in_options = true;
         } else if start_from_fen_button.clicked() {
             self.in_from_fen = true;
             self.in_menu = false;
@@ -170,19 +186,113 @@ impl<'a> ChessApp<'a> {
                     board.print_board(&board.turn);
                     self.board = board;
                     self.in_from_fen = false;
-                    self.in_menu = false;
                 }
                 Err(_) => println!("Invalid FEN string"),
             };
         }
     }
 
+    fn draw_color_wheel(&mut self, ui: &mut Ui) {
+        egui::color_picker::color_edit_button_rgb(ui, &mut self.white_color);
+    }
+
+    fn draw_options(&mut self, ui: &mut Ui, ctx: &Context) {
+        self.draw_page_title("OPTIONS", ui);
+        let slider_ui_size = Vec2::new(2. * self.window_size / 3., self.window_size / 4.);
+
+        let white_rect = Rect::from_min_size(
+            Pos2::new(self.window_size / 6., self.window_size / 5.),
+            slider_ui_size,
+        );
+        let mut white_ui = ui.child_ui(white_rect, Layout::default());
+        draw_color_sliders(
+            &mut self.white_color,
+            &mut white_ui,
+            "Light square background",
+            self.font_size * 0.8,
+        );
+
+        let black_rect = Rect::from_min_size(
+            Pos2::new(
+                white_rect.left_top().x,
+                white_rect.left_top().y + slider_ui_size.y,
+            ),
+            slider_ui_size,
+        );
+        let mut black_ui = ui.child_ui(black_rect, Layout::default());
+        draw_color_sliders(
+            &mut self.black_color,
+            &mut black_ui,
+            "Dark square background",
+            self.font_size * 0.8,
+        );
+
+        let resolution_height = 0.1 * self.window_size;
+        let resolution_rect = Rect::from_min_size(
+            Pos2::new(
+                white_rect.left_top().x,
+                black_rect.left_top().y + slider_ui_size.y,
+            ),
+            Vec2::new(2. * self.window_size / 3., resolution_height),
+        );
+        let mut resolution_ui =
+            ui.child_ui(resolution_rect, Layout::left_to_right(egui::Align::LEFT));
+        egui::ComboBox::from_label(RichText::new("Resolution").size(self.font_size * 0.8))
+            .selected_text(format!(
+                "{}x{}",
+                self.window_size as i32, self.window_size as i32
+            ))
+            .show_ui(&mut resolution_ui, |ui| {
+                ui.selectable_value(&mut self.window_size, 600., "600x600");
+                ui.selectable_value(&mut self.window_size, 800., "800x800");
+            });
+        ctx.screen_rect().set_height(self.window_size);
+        ctx.screen_rect().set_width(self.window_size);
+
+        let back_button = ui.put(
+            Rect::from_center_size(
+                Pos2::new(self.window_size / 2., self.window_size * 0.9),
+                Vec2::new(self.window_size / 5., resolution_height),
+            ),
+            Button::new("Back"),
+        );
+
+        if ui.input(|i| i.key_pressed(egui::Key::Enter)) | back_button.clicked() {
+            self.in_menu = true;
+            self.in_options = false;
+        }
+    }
+
+    fn draw_page_title(&self, label: &str, ui: &mut Ui) {
+        // Layout::centered_and_justified(Label::new(RichText::new(label).size(self.font_size).strong()));
+        ui.with_layout(
+            Layout::top_down_justified(egui::Align::Center),
+            |label_ui| {
+                label_ui.painter().text(
+                    label_ui.max_rect().center_top() + Vec2::new(0.0, self.square_size / 2.0),
+                    Align2::CENTER_CENTER,
+                    label,
+                    egui::FontId::proportional(self.font_size),
+                    Color32::from_rgb(255, 255, 255),
+                );
+            },
+        );
+    }
+
     fn draw_board_with_pieces(&self, ui: &mut Ui) {
         for row in 0..8 {
             for col in 0..8 {
-                let mut square_color = Color32::from_rgb(165, 82, 42);
+                let mut square_color = Color32::from_rgb(
+                    self.black_color[0] as u8,
+                    self.black_color[1] as u8,
+                    self.black_color[2] as u8,
+                );
                 if (row + col) % 2 == 0 {
-                    square_color = Color32::from_rgb(255, 228, 196);
+                    square_color = Color32::from_rgb(
+                        self.white_color[0] as u8,
+                        self.white_color[1] as u8,
+                        self.white_color[2] as u8,
+                    );
                 }
                 let row = row as f32;
                 let col = col as f32;

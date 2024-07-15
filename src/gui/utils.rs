@@ -1,6 +1,10 @@
 use crate::helpers::Position;
 use crate::pieces::{Color, PieceKind};
-use eframe::egui::{Color32, Image, Pos2, Rect, Rounding, Shape, Stroke, Vec2};
+use eframe::egui::{
+    Color32, FontId, Image, Pos2, Rect, RichText, Rounding, Shape, Slider, Stroke, TextStyle, Ui,
+    Vec2,
+};
+use eframe::epaint::FontFamily;
 
 use std::collections::HashMap;
 
@@ -94,4 +98,41 @@ pub fn convert_board_position_to_ui(position: &Position, turn: Color, square_siz
         y = position.y as f32 * square_size;
     }
     Pos2::new(x, y)
+}
+
+pub fn draw_color_sliders(colors: &mut [f32; 3], ui: &mut Ui, label: &str, font_size: f32) {
+    ui.style_mut().text_styles.insert(
+        TextStyle::Button,
+        FontId::new(font_size, FontFamily::Proportional),
+    );
+    ui.label(RichText::new(label).size(font_size));
+
+    ui.style_mut().spacing.slider_width = ui.max_rect().width() / 2.;
+    ui.add(
+        Slider::new(&mut colors[0], 0.0..=255.0)
+            .text("R")
+            .max_decimals(0),
+    );
+    ui.add(
+        Slider::new(&mut colors[1], 0.0..=255.0)
+            .text("G")
+            .max_decimals(0),
+    );
+    ui.add(
+        Slider::new(&mut colors[2], 0.0..=255.0)
+            .text("B")
+            .max_decimals(0),
+    );
+    ui.layout().prefer_right_to_left();
+
+    let right_top = ui.max_rect().right_top();
+    let rect_width = ui.max_rect().width() / 5.;
+    let left_top = Pos2::new(right_top.x - rect_width, right_top.y);
+    let rect = Rect::from_min_size(left_top, Vec2::new(rect_width, ui.max_rect().height()));
+    let square = make_square(
+        rect,
+        Color32::from_rgb(colors[0] as u8, colors[1] as u8, colors[2] as u8),
+        true,
+    );
+    ui.painter().add(square);
 }
