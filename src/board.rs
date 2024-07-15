@@ -193,6 +193,77 @@ impl Board {
         true
     }
 
+    pub fn to_fen(&self) -> String {
+        let mut fen_string = "".to_owned();
+
+         let prepared_board: Vec<Vec<Option<Piece>>> = (0..8).map(|col| {
+            (0..8)
+                .map(|row| self.board[7-row][7-col])
+                .collect::<Vec<Option<Piece>>>()
+        }).collect();
+        
+        for (i, board_row) in prepared_board.iter().enumerate() {
+            let mut blank_squares = 0;
+            for square in board_row.iter() {
+                match square {
+                    Some(piece) => {
+                        if blank_squares > 0 {
+                            fen_string.push_str(&blank_squares.to_string())
+                        }
+                        fen_string.push(piece.get_piece_kind_as_char())
+                    },
+                    None => blank_squares += 1,
+                }
+            }
+            if blank_squares > 0 {
+                fen_string.push_str(&blank_squares.to_string())
+            }
+            if i < 7 {
+                fen_string.push('/');
+            }
+        }
+
+        fen_string.push(' ');
+
+        if self.turn == Color::White {
+            fen_string.push_str("w");
+        } else {
+            fen_string.push_str("b");
+        }
+
+        fen_string.push(' ');
+
+        if self.castling[&Color::White][0] {
+            fen_string.push('K');
+        }
+        if self.castling[&Color::White][1] {
+            fen_string.push('Q');
+        }
+        if self.castling[&Color::Black][0] {
+            fen_string.push('k');
+        }
+        if self.castling[&Color::Black][1] {
+            fen_string.push('q');
+        }
+
+        fen_string.push(' ');
+
+        match self.en_passant {
+            Some(position) => fen_string.push_str(&position.get_as_chess_string()),
+            None => fen_string.push('-'),
+        }
+
+        fen_string.push(' ');
+
+        fen_string.push_str(&self.n_half_moves.to_string());
+
+        fen_string.push(' ');
+
+        fen_string.push_str(&self.n_full_moves.to_string());
+
+        return fen_string
+    }
+
     pub fn from_fen(fen: &str) -> Result<Board, Error> {
         let fen_parts: Vec<&str> = fen.split(' ').collect();
 
@@ -347,5 +418,13 @@ mod test_board {
         let board = Board::from_fen(fen);
 
         assert_eq!(board.unwrap(), Board::new())
+    }
+
+    #[test]
+    fn test_to_fen_new_game() {
+        let new_board_fen = Board::new().to_fen();
+        let expected_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_owned();
+
+        assert_eq!(new_board_fen, expected_fen)
     }
 }

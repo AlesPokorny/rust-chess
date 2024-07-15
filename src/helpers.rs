@@ -19,6 +19,15 @@ impl Position {
     pub fn get_x_y_as_int(&self) -> (i32, i32) {
         (self.x as i32, self.y as i32)
     }
+
+    pub fn get_as_chess_string(&self) -> String {
+        let (x, y) = self.get_x_y_as_int();
+        let mut string_position = "".to_owned();
+        string_position.push_str(&(104 - x).to_string());
+        string_position.push_str(&y.to_string());  
+        
+        string_position
+    }
 }
 
 pub struct Direction {

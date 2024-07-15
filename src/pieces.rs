@@ -98,6 +98,23 @@ impl Piece {
         };
         (piece_kind, color)
     }
+
+    pub fn get_piece_kind_as_char(&self) -> char {
+        let mut piece_kind = match self.kind {
+            PieceKind::R => 'r',
+            PieceKind::N => 'n',
+            PieceKind::B => 'b',
+            PieceKind::Q => 'q',
+            PieceKind::K => 'k',
+            PieceKind::P => 'p',
+        };
+
+        if self.color == Color::White {
+            piece_kind = piece_kind.to_ascii_uppercase();
+        }
+
+        piece_kind
+    }
 }
 
 impl std::fmt::Display for Piece {
