@@ -363,7 +363,6 @@ impl<'a> ChessApp<'a> {
         if let Some(piece) = piece_option {
             if piece.color == self.board.turn {
                 self.chosen_piece = Some(*piece);
-                println!("{:?}", piece.position);
                 return Some(*piece);
             }
         }
@@ -387,6 +386,7 @@ impl<'a> ChessApp<'a> {
             self.board.turn = Color::White;
         }
         self.possible_moves = Vec::new();
+        self.board.history.push(self.board.to_fen());
     }
 
     fn do_promotion_stuff(&mut self, promotion_position: Position, ui: &mut Ui, ctx: &Context) {
@@ -493,13 +493,18 @@ impl<'a> ChessApp<'a> {
     fn end_of_turn_ceremonies(&mut self) {
         self.set_values_at_the_end_of_turn();
 
+        if self.board.n_half_moves > 7 && self.board.is_repetition(self.board.n_half_moves) {
+            println!("Repetition draw. Y'all suck!");
+            exit(0);
+        }
+
         if self.board.is_checkmate() {
             println!("Checkmate!");
             exit(0);
         }
 
         if self.board.n_half_moves >= 100 {
-            println!("Tis draw");
+            println!("Tis a draw");
             exit(0);
         }
     }

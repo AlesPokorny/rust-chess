@@ -14,6 +14,7 @@ pub struct Board {
     pub castling: HashMap<Color, [bool; 2]>,
     pub n_half_moves: u16,
     pub n_full_moves: u16,
+    pub history: Vec<String>,
 }
 
 impl Board {
@@ -55,6 +56,7 @@ impl Board {
             castling: HashMap::from([(Color::White, [true, true]), (Color::Black, [true, true])]),
             n_half_moves: 0_u16,
             n_full_moves: 1_u16,
+            history: vec!["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_owned()],
         };
 
         for (row_i, row) in temp_board.iter().enumerate() {
@@ -196,12 +198,14 @@ impl Board {
     pub fn to_fen(&self) -> String {
         let mut fen_string = "".to_owned();
 
-         let prepared_board: Vec<Vec<Option<Piece>>> = (0..8).map(|col| {
-            (0..8)
-                .map(|row| self.board[7-row][7-col])
-                .collect::<Vec<Option<Piece>>>()
-        }).collect();
-        
+        let prepared_board: Vec<Vec<Option<Piece>>> = (0..8)
+            .map(|col| {
+                (0..8)
+                    .map(|row| self.board[7 - row][7 - col])
+                    .collect::<Vec<Option<Piece>>>()
+            })
+            .collect();
+
         for (i, board_row) in prepared_board.iter().enumerate() {
             let mut blank_squares = 0;
             for square in board_row.iter() {
@@ -210,8 +214,9 @@ impl Board {
                         if blank_squares > 0 {
                             fen_string.push_str(&blank_squares.to_string())
                         }
-                        fen_string.push(piece.get_piece_kind_as_char())
-                    },
+                        fen_string.push(piece.get_piece_kind_as_char());
+                        blank_squares = 0;
+                    }
                     None => blank_squares += 1,
                 }
             }
@@ -226,9 +231,9 @@ impl Board {
         fen_string.push(' ');
 
         if self.turn == Color::White {
-            fen_string.push_str("w");
+            fen_string.push('w');
         } else {
-            fen_string.push_str("b");
+            fen_string.push('b');
         }
 
         fen_string.push(' ');
@@ -261,7 +266,7 @@ impl Board {
 
         fen_string.push_str(&self.n_full_moves.to_string());
 
-        return fen_string
+        fen_string
     }
 
     pub fn from_fen(fen: &str) -> Result<Board, Error> {
@@ -377,6 +382,7 @@ impl Board {
             castling,
             n_half_moves,
             n_full_moves,
+            history: vec![fen.to_owned()],
         })
     }
 
@@ -386,6 +392,33 @@ impl Board {
 
     pub fn reset_half_move(&mut self) {
         self.n_half_moves = 0;
+    }
+
+    pub fn is_repetition(&self, n_moves: u16) -> bool {
+        let history_len = self.history.len();
+        let history_subset: Vec<String> = if history_len >= n_moves as usize {
+            self.history[history_len - ((n_moves + 1) as usize)..history_len - 1].to_vec()
+        } else {
+            self.history[..history_len - 1].to_vec()
+        };
+
+        let fen_items_to_find: Vec<&str> = self.history.last().unwrap().split(' ').collect();
+
+        let mut repetition_count = 0_u8;
+        for historical_board in history_subset {
+            let historical_board_split: Vec<&str> = historical_board.split(' ').collect();
+
+            // checks if board and turn are same
+            if (historical_board_split[0] == fen_items_to_find[0])
+                & (historical_board_split[1] == fen_items_to_find[1])
+            {
+                repetition_count += 1;
+                if repetition_count >= 2 {
+                    return true;
+                }
+            }
+        }
+        false
     }
 }
 
