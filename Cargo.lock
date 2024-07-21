@@ -2583,6 +2583,7 @@ dependencies = [
  "eframe",
  "egui_extras",
  "image",
+ "rand",
 ]
 
 [[package]]

@@ -36,7 +36,7 @@ fn get_straight_moves(
 
     for direction in directions.iter() {
         let mut moves_in_one_direction: Vec<Position> = Vec::new();
-        for step in 1..max_step {
+        for step in 1..=max_step {
             if let Some(position) = Position::get_valid_position(
                 current_x + step * direction.x,
                 current_y + step * direction.y,

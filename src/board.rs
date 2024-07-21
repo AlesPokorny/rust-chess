@@ -1,4 +1,4 @@
-use crate::helpers::Position;
+use crate::helpers::{Move, Position};
 use crate::pieces::{Color, Piece, PieceKind};
 use crate::utils::chess_coord_to_position;
 
@@ -144,7 +144,7 @@ impl Board {
         [white, black]
     }
 
-    pub fn get_all_moves_of_color(&self, color: Color) -> Vec<Position> {
+    pub fn get_all_moves_of_color(&self, color: Color) -> Vec<Move> {
         let color_index: usize;
         let opponent_index: usize;
         if color == Color::White {
@@ -160,10 +160,13 @@ impl Board {
         let friendly_positions = &self.get_color_positions(color_pieces);
         let opponent_positions = &self.get_color_positions(&all_pieces[opponent_index]);
 
-        let mut all_moves: Vec<Position> = Vec::new();
+        let mut all_moves: Vec<Move> = Vec::new();
         for piece in color_pieces {
-            let piece_moves = piece.get_piece_moves(friendly_positions, opponent_positions, self);
-            all_moves.extend(piece_moves);
+            let piece_moves = piece
+                .get_piece_moves(friendly_positions, opponent_positions, self)
+                .into_iter()
+                .map(|new_position| Move::new(piece.position, new_position));
+            all_moves.extend(piece_moves)
         }
         all_moves
     }

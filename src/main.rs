@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 mod board;
+mod bot;
 mod gui;
 mod helpers;
 mod moves;

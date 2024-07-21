@@ -35,6 +35,18 @@ pub struct Direction {
     pub y: i32,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Move {
+    pub from: Position,
+    pub to: Position,
+}
+
+impl Move {
+    pub fn new(from: Position, to: Position) -> Move {
+        Move { from, to }
+    }
+}
+
 impl Direction {
     pub fn new(x: i32, y: i32) -> Direction {
         Direction { x, y }

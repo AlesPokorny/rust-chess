@@ -86,7 +86,11 @@ pub fn convert_click_to_board_position(
     Position::get_valid_position(x, y).unwrap()
 }
 
-pub fn convert_board_position_to_ui(position: &Position, player_color: Color, square_size: f32) -> Pos2 {
+pub fn convert_board_position_to_ui(
+    position: &Position,
+    player_color: Color,
+    square_size: f32,
+) -> Pos2 {
     let x: f32;
     let y: f32;
 
