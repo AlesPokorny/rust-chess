@@ -32,6 +32,7 @@ pub struct ChessApp<'a> {
     white_color: [f32; 3],
     black_color: [f32; 3],
     colors: [[f32; 3]; 2],
+    player_color: Color,
 }
 
 impl<'a> Default for ChessApp<'a> {
@@ -55,6 +56,7 @@ impl<'a> Default for ChessApp<'a> {
             white_color: [255., 228., 196.],
             black_color: [165., 82., 42.],
             colors: [[255., 228., 196.], [165., 82., 42.]],
+            player_color: Color::White,
         }
     }
 }
@@ -87,7 +89,7 @@ impl<'a> App for ChessApp<'a> {
                     self.do_promotion_stuff(promotion_position, ui, ctx);
                 } else if let Some(pos) = ctx.input(|i| i.pointer.press_origin()) {
                     let click_position =
-                        convert_click_to_board_position(pos, self.board.turn, self.square_size);
+                        convert_click_to_board_position(pos, self.player_color, self.square_size);
                     match self.chosen_piece {
                         Some(piece) => {
                             if self.possible_moves.contains(&click_position) {
@@ -308,7 +310,7 @@ impl<'a> ChessApp<'a> {
                 let mut board_x = col as usize;
                 let mut board_y = row as usize;
 
-                if self.board.turn == Color::White {
+                if self.player_color == Color::White {
                     board_x = 7 - board_x;
                     board_y = 7 - board_y;
                 }
@@ -327,7 +329,7 @@ impl<'a> ChessApp<'a> {
     fn draw_move_selection(&mut self, ui: &mut Ui) {
         if let Some(piece) = self.chosen_piece {
             let piece_pos =
-                convert_board_position_to_ui(&piece.position, self.board.turn, self.square_size);
+                convert_board_position_to_ui(&piece.position, self.player_color, self.square_size);
             let piece_rect =
                 Rect::from_min_size(piece_pos, Vec2::new(self.square_size, self.square_size));
             let square = make_square(piece_rect, Color32::BLUE, false);
@@ -336,7 +338,7 @@ impl<'a> ChessApp<'a> {
 
         for position in &self.possible_moves {
             let move_pos =
-                convert_board_position_to_ui(position, self.board.turn, self.square_size);
+                convert_board_position_to_ui(position, self.player_color, self.square_size);
             let move_dot = Shape::circle_filled(
                 Pos2::new(
                     move_pos.x + (self.square_size / 2.),
@@ -391,7 +393,7 @@ impl<'a> ChessApp<'a> {
 
     fn do_promotion_stuff(&mut self, promotion_position: Position, ui: &mut Ui, ctx: &Context) {
         let ui_pos =
-            convert_board_position_to_ui(&promotion_position, self.board.turn, self.square_size);
+            convert_board_position_to_ui(&promotion_position, self.player_color, self.square_size);
         let pieces = [
             Piece::new(self.board.turn, PieceKind::Q, promotion_position),
             Piece::new(self.board.turn, PieceKind::R, promotion_position),
@@ -413,7 +415,7 @@ impl<'a> ChessApp<'a> {
         }
         if let Some(click_pos) = ctx.input(|i| i.pointer.press_origin()) {
             let click_position =
-                convert_click_to_board_position(click_pos, self.board.turn, self.square_size);
+                convert_click_to_board_position(click_pos, self.player_color, self.square_size,);
 
             if (promotion_position.x == click_position.x)
                 & (promotion_position.y.abs_diff(click_position.y) <= 3)

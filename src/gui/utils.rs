@@ -73,24 +73,24 @@ pub fn init_assets<'a>(size: f32) -> HashMap<(PieceKind, Color), Image<'a>> {
 
 pub fn convert_click_to_board_position(
     click_position: Pos2,
-    turn: Color,
+    player_color: Color,
     square_size: f32,
 ) -> Position {
     let x = (click_position.x / square_size) as i32;
     let y = (click_position.y / square_size) as i32;
 
-    if turn == Color::White {
+    if player_color == Color::White {
         return Position::get_valid_position(7 - x, 7 - y).unwrap();
     }
 
     Position::get_valid_position(x, y).unwrap()
 }
 
-pub fn convert_board_position_to_ui(position: &Position, turn: Color, square_size: f32) -> Pos2 {
+pub fn convert_board_position_to_ui(position: &Position, player_color: Color, square_size: f32) -> Pos2 {
     let x: f32;
     let y: f32;
 
-    if turn == Color::White {
+    if player_color == Color::White {
         x = (7 - position.x) as f32 * square_size;
         y = (7 - position.y) as f32 * square_size;
     } else {
