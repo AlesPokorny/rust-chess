@@ -395,6 +395,10 @@ impl Board {
         self.n_half_moves += 1;
     }
 
+    pub fn increase_full_move(&mut self) {
+        self.n_full_moves += 1;
+    }
+
     pub fn reset_half_move(&mut self) {
         self.n_half_moves = 0;
     }

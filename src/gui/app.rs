@@ -402,6 +402,7 @@ impl<'a> ChessApp<'a> {
         if self.board.turn == Color::White {
             self.board.turn = Color::Black;
         } else {
+            self.board.increase_full_move();
             self.board.turn = Color::White;
         }
         self.possible_moves = Vec::new();

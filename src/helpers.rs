@@ -1,3 +1,5 @@
+use std::str::from_utf8;
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Position {
     pub x: usize,
@@ -21,10 +23,9 @@ impl Position {
     }
 
     pub fn get_as_chess_string(&self) -> String {
-        let (x, y) = self.get_x_y_as_int();
         let mut string_position = "".to_owned();
-        string_position.push_str(&(104 - x).to_string());
-        string_position.push_str(&y.to_string());
+        string_position.push_str(from_utf8(&[(104 - self.x) as u8]).unwrap());
+        string_position.push_str(from_utf8(&[49 + self.y as u8]).unwrap());
 
         string_position
     }
