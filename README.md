@@ -7,4 +7,3 @@
  - Fix choosing resolution setting
 
  ### known bugs
-  - kings can go to kissing distance

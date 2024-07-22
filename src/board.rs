@@ -13,6 +13,7 @@ pub struct Board {
     pub board: [[Option<Piece>; 8]; 8],
     pub king_positions: HashMap<Color, Position>,
     pub turn: Color,
+    pub next_turn: Color,
     pub en_passant: Option<Position>,
     pub castling: HashMap<Color, [bool; 2]>,
     pub n_half_moves: u16,
@@ -55,6 +56,7 @@ impl Board {
                 ),
             ]),
             turn: Color::White,
+            next_turn: Color::Black,
             en_passant: None,
             castling: HashMap::from([(Color::White, [true, true]), (Color::Black, [true, true])]),
             n_half_moves: 0_u16,
@@ -332,11 +334,14 @@ impl Board {
                 }
             }
         }
-
-        let turn = if fen_parts[1] == "w" {
-            Color::White
+        let turn: Color;
+        let next_turn: Color;
+        if fen_parts[1] == "w" {
+            turn = Color::White;
+            next_turn = Color::Black;
         } else if fen_parts[1] == "b" {
-            Color::Black
+            turn = Color::Black;
+            next_turn = Color::White;
         } else {
             return Err(invalid_fen_error);
         };
@@ -384,6 +389,7 @@ impl Board {
             board,
             king_positions,
             turn,
+            next_turn,
             en_passant,
             castling,
             n_half_moves,

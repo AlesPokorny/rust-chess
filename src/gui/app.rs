@@ -13,6 +13,7 @@ use eframe::egui::{
 };
 use eframe::{self, App, Frame};
 use std::collections::HashMap;
+use std::mem::swap;
 use std::process::exit;
 use std::thread::sleep;
 use std::time::Duration;
@@ -399,12 +400,13 @@ impl<'a> ChessApp<'a> {
 
     fn set_values_at_the_end_of_turn(&mut self) {
         self.chosen_piece = None;
-        if self.board.turn == Color::White {
-            self.board.turn = Color::Black;
-        } else {
-            self.board.increase_full_move();
-            self.board.turn = Color::White;
+
+        if self.board.turn == Color::Black {
+            self.board.increase_full_move()
         }
+
+        swap(&mut self.board.turn, &mut self.board.next_turn);
+
         self.possible_moves = Vec::new();
         self.board.history.push(self.board.to_fen());
     }
@@ -489,14 +491,34 @@ impl<'a> ChessApp<'a> {
             self.promotion_position = Some(piece_move.to);
         }
         let castling = self.board.castling[&self.board.turn];
-        let is_rook = piece_kind == PieceKind::R;
-        let new_castling = [
-            castling[0] & !((is_rook) & (piece_move.from.x == 0)),
-            castling[1] & !((is_rook) & (piece_move.from.x == 7)),
-        ];
-        if castling != new_castling {
-            self.board.castling.insert(self.board.turn, new_castling);
+        if castling.into_iter().any(|x| x) {
+            let is_rook = piece_kind == PieceKind::R;
+            let new_castling = [
+                castling[0] & !((is_rook) & (piece_move.from.x == 0)),
+                castling[1] & !((is_rook) & (piece_move.from.x == 7)),
+            ];
+            if castling != new_castling {
+                self.board.castling.insert(self.board.turn, new_castling);
+            }
         }
+        let opponent_castling = self.board.castling[&self.board.next_turn];
+        if opponent_castling.into_iter().any(|x| x) {
+            let opponent_row = if self.board.next_turn == Color::White {
+                0_usize
+            } else {
+                7_usize
+            };
+            let new_castling = [
+                opponent_castling[0] && !(piece_move.to.x == 0 && piece_move.to.y == opponent_row),
+                opponent_castling[1] && !(piece_move.to.x == 7 && piece_move.to.y == opponent_row),
+            ];
+            if opponent_castling != new_castling {
+                self.board
+                    .castling
+                    .insert(self.board.next_turn, new_castling);
+            }
+        }
+
         if was_en_passant_played(&piece_kind, &piece_move.to, &self.board.en_passant) {
             self.board
                 .remove_piece(&Position::new(piece_move.to.x, piece_move.from.y));
@@ -509,8 +531,7 @@ impl<'a> ChessApp<'a> {
         } else {
             self.board.increase_half_move();
         }
-
-        println!("N half moves: {}", self.board.n_half_moves);
+        println!("{:?}", self.board.castling);
     }
 
     fn end_of_turn_ceremonies(&mut self) {
@@ -518,12 +539,7 @@ impl<'a> ChessApp<'a> {
 
         if self.board.no_possible_moves() {
             if self.board.is_king_in_check(&self.board.turn) {
-                let winning_color = if self.board.turn == Color::White {
-                    Color::Black
-                } else {
-                    Color::White
-                };
-                println!("Checkmate! {:?} won", winning_color);
+                println!("Checkmate! {:?} won", self.board.next_turn);
             } else {
                 println!("Draw!");
             }
