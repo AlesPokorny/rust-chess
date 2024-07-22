@@ -516,14 +516,23 @@ impl<'a> ChessApp<'a> {
     fn end_of_turn_ceremonies(&mut self) {
         self.set_values_at_the_end_of_turn();
 
-        if self.board.n_half_moves > 7 && self.board.is_repetition(self.board.n_half_moves) {
-            println!("Repetition draw. Y'all suck!");
+        if self.board.no_possible_moves() {
+            if self.board.is_king_in_check(&self.board.turn) {
+                let winning_color = if self.board.turn == Color::White {
+                    Color::Black
+                } else {
+                    Color::White
+                };
+                println!("Checkmate! {:?} won", winning_color);
+            } else {
+                println!("Draw!");
+            }
             self.board.write_to_file();
             exit(0);
         }
 
-        if self.board.is_checkmate() {
-            println!("Checkmate!");
+        if self.board.n_half_moves > 7 && self.board.is_repetition(self.board.n_half_moves) {
+            println!("Repetition draw. Y'all suck!");
             self.board.write_to_file();
             exit(0);
         }

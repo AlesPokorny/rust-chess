@@ -1,4 +1,5 @@
 use crate::helpers::{Move, Position};
+use crate::moves::is_field_in_check;
 use crate::pieces::{Color, Piece, PieceKind};
 use crate::utils::chess_coord_to_position;
 
@@ -185,7 +186,7 @@ impl Board {
         [white_positions, black_positions]
     }
 
-    pub fn is_checkmate(&self) -> bool {
+    pub fn no_possible_moves(&self) -> bool {
         let all_pieces = self.get_pieces();
         let all_positions = self.get_all_positions();
         let friendly_positions = &all_positions[(self.turn == Color::Black) as usize];
@@ -451,6 +452,10 @@ impl Board {
         filename.push_str(".txt");
 
         fs::write(filename, self.history.join("\n")).expect("");
+    }
+
+    pub fn is_king_in_check(&self, color: &Color) -> bool {
+        is_field_in_check(self.king_positions[color], self)
     }
 }
 
