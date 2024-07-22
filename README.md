@@ -1,6 +1,5 @@
 # Rust
 ## TODO
- - add logging
  - Add material draw condition
  - improve bots
  - checks

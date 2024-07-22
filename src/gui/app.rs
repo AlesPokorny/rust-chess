@@ -517,16 +517,19 @@ impl<'a> ChessApp<'a> {
 
         if self.board.n_half_moves > 7 && self.board.is_repetition(self.board.n_half_moves) {
             println!("Repetition draw. Y'all suck!");
+            self.board.write_to_file();
             exit(0);
         }
 
         if self.board.is_checkmate() {
             println!("Checkmate!");
+            self.board.write_to_file();
             exit(0);
         }
 
         if self.board.n_half_moves >= 100 {
             println!("Tis a draw");
+            self.board.write_to_file();
             exit(0);
         }
     }

@@ -2,7 +2,9 @@ use crate::helpers::{Move, Position};
 use crate::pieces::{Color, Piece, PieceKind};
 use crate::utils::chess_coord_to_position;
 
+use chrono::Local;
 use std::collections::HashMap;
+use std::fs;
 use std::io::Error;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -437,6 +439,14 @@ impl Board {
 
         board.move_piece(&move_to_try.from, &move_to_try.to);
         board
+    }
+
+    pub fn write_to_file(&self) {
+        let mut filename = "./logs/".to_owned();
+        filename.push_str(&Local::now().to_string());
+        filename.push_str(".txt");
+
+        fs::write(filename, self.history.join("\n")).expect("");
     }
 }
 
