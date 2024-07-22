@@ -1,5 +1,5 @@
 use crate::board::Board;
-use crate::bot::make_random_move;
+use crate::bot::find_best_point_move_depth_one;
 use crate::gui::utils::*;
 use crate::helpers::{Move, Position};
 use crate::moves::get_rook_old_and_new_castling_positions;
@@ -104,7 +104,7 @@ impl<'a> App for ChessApp<'a> {
                                         self.end_of_turn_ceremonies();
                                     }
                                     // The ui is so damn fast that without sleep, it uses the same click multiple times
-                                    sleep(Duration::from_secs_f32(0.1));
+                                    sleep(Duration::from_secs_f32(0.1 ));
                                 } else {
                                     self.select_piece_and_update_moves(&click_position);
                                 }
@@ -115,7 +115,7 @@ impl<'a> App for ChessApp<'a> {
                         }
                     }
                 } else {
-                    let bot_move = make_random_move(&self.board);
+                    let bot_move = find_best_point_move_depth_one(&self.board);
                     self.bust_a_move(bot_move);
                     if self.promotion_position.is_some() {
                         let new_piece =

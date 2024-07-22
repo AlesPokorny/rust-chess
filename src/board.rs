@@ -423,6 +423,21 @@ impl Board {
         }
         false
     }
+
+    pub fn count_points(&self) -> (i32, i32) {
+        let all_pieces = self.get_pieces();
+        let white_points: i32 = all_pieces[0].iter().map(|piece| piece.points).sum();
+        let black_points: i32 = all_pieces[1].iter().map(|piece| piece.points).sum();
+
+        return (white_points, black_points)
+    }
+
+    pub fn try_move(&self, move_to_try: &Move) -> Board {
+        let mut board = self.clone();
+
+        board.move_piece(&move_to_try.from, &move_to_try.to);
+        return board
+    }
 }
 
 #[cfg(test)]
