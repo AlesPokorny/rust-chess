@@ -221,19 +221,22 @@ pub fn get_king_moves(
     position: &Position,
     board: &Board,
     friendly_positions: &[Position],
+    include_castling: bool,
 ) -> Vec<Position> {
     let mut moves: Vec<Position> = Vec::new();
 
-    let [can_castle_short, can_castle_long] = board.castling[&board.turn];
+    if include_castling {
+        let [can_castle_short, can_castle_long] = board.castling[&board.turn];
 
-    if can_castle_short {
-        if let Some(castling_move) = get_castling_move(board, true) {
-            moves.push(castling_move);
+        if can_castle_short {
+            if let Some(castling_move) = get_castling_move(board, true) {
+                moves.push(castling_move);
+            }
         }
-    }
-    if can_castle_long {
-        if let Some(castling_move) = get_castling_move(board, false) {
-            moves.push(castling_move);
+        if can_castle_long {
+            if let Some(castling_move) = get_castling_move(board, false) {
+                moves.push(castling_move);
+            }
         }
     }
 
@@ -331,6 +334,16 @@ pub fn is_field_in_check(field_position: Position, board: &Board) -> bool {
             }
         }
     }
+
+    let king_moves = get_king_moves(&field_position, board, friendly_positions, false);
+    for king_move in king_moves {
+        if let Some(piece) = board.get_piece_from_position(&king_move) {
+            if (piece.color != board.turn) & (piece.kind == PieceKind::K) {
+                return true;
+            }
+        }
+    }
+
     false
 }
 
