@@ -1,6 +1,5 @@
 use crate::board::Board;
 use crate::helpers::Move;
-use crate::pieces::Color;
 
 use rand::Rng;
 
@@ -12,17 +11,15 @@ pub fn find_random_move(board: &Board) -> Move {
 }
 
 pub fn find_best_point_move_depth_one(board: &Board) -> Move {
-    let turn = board.turn;
     let mut moves_with_points = board
         .get_all_moves_of_color(board.turn)
         .into_iter()
         .map(|move_to_check| {
-            let points = board.try_move(&move_to_check).count_points();
-            if turn == Color::White {
-                (move_to_check, points.0 - points.1)
-            } else {
-                (move_to_check, points.1 - points.0)
-            }
+            let points = board.try_move(move_to_check).count_points();
+            (
+                move_to_check,
+                points[&board.turn] - points[&board.next_turn],
+            )
         })
         .collect::<Vec<(Move, i32)>>();
     moves_with_points.sort_by_key(|item| -item.1);

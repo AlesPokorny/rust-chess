@@ -2,10 +2,7 @@ use crate::board::Board;
 use crate::bot::find_best_point_move_depth_one;
 use crate::gui::utils::*;
 use crate::helpers::{Move, Position};
-use crate::moves::get_rook_old_and_new_castling_positions;
 use crate::pieces::{Color, Piece, PieceKind};
-
-use crate::utils::{get_en_passant, was_en_passant_played};
 
 use eframe::egui::{
     self, Align2, Button, CentralPanel, Color32, Context, Image, Layout, Pos2, Rect, RichText,
@@ -25,7 +22,6 @@ pub struct ChessApp<'a> {
     square_size: f32,
     chosen_piece: Option<Piece>,
     possible_moves: Vec<Position>,
-    promotion_position: Option<Position>,
     in_menu: bool,
     in_from_fen: bool,
     in_options: bool,
@@ -49,7 +45,6 @@ impl<'a> Default for ChessApp<'a> {
             square_size,
             chosen_piece: None,
             possible_moves: Vec::new(),
-            promotion_position: None,
             in_menu: true,
             in_from_fen: false,
             in_options: false,
@@ -88,7 +83,7 @@ impl<'a> App for ChessApp<'a> {
                 self.draw_move_selection(ui);
 
                 if self.player_color == self.board.turn {
-                    if let Some(promotion_position) = self.promotion_position {
+                    if let Some(promotion_position) = self.board.promotion_position {
                         println!("how did I get here?");
                         self.do_promotion_stuff(promotion_position, ui, ctx);
                     } else if let Some(pos) = ctx.input(|i| i.pointer.press_origin()) {
@@ -100,8 +95,9 @@ impl<'a> App for ChessApp<'a> {
                         match self.chosen_piece {
                             Some(piece) => {
                                 if self.possible_moves.contains(&click_position) {
-                                    self.bust_a_move(Move::new(piece.position, click_position));
-                                    if self.promotion_position.is_none() {
+                                    self.board
+                                        .bust_a_move(Move::new(piece.position, click_position));
+                                    if self.board.promotion_position.is_none() {
                                         self.end_of_turn_ceremonies();
                                     }
                                     // The ui is so damn fast that without sleep, it uses the same click multiple times
@@ -117,12 +113,12 @@ impl<'a> App for ChessApp<'a> {
                     }
                 } else {
                     let bot_move = find_best_point_move_depth_one(&self.board);
-                    self.bust_a_move(bot_move);
-                    if self.promotion_position.is_some() {
+                    self.board.bust_a_move(bot_move);
+                    if self.board.promotion_position.is_some() {
                         let new_piece =
                             Some(Piece::new(self.board.turn, PieceKind::Q, bot_move.to));
                         self.board.board[bot_move.to.x][bot_move.to.y] = new_piece;
-                        self.promotion_position = None;
+                        self.board.promotion_position = None;
                     }
                     self.end_of_turn_ceremonies();
                 }
@@ -442,96 +438,10 @@ impl<'a> ChessApp<'a> {
             {
                 let piece = pieces[promotion_position.y.abs_diff(click_position.y)];
                 self.board.board[promotion_position.x][promotion_position.y] = Some(piece);
-                self.promotion_position = None;
+                self.board.promotion_position = None;
                 self.end_of_turn_ceremonies();
             }
         }
-    }
-
-    fn bust_a_move(&mut self, piece_move: Move) {
-        let piece = self
-            .board
-            .get_piece_from_position(&piece_move.from)
-            .unwrap();
-        let piece_kind = piece.kind;
-
-        // can we make this bit better? use the self.chosen_piece as mutable reference
-        // so we dont have to dig it out again?
-        // only if I knew how...
-        let piece_to_move = match &mut self.board.board[piece_move.from.x][piece_move.from.y] {
-            Some(piece_to_move) => piece_to_move,
-            None => panic!("Oh no! There should be a piece at this position."),
-        };
-        piece_to_move.move_piece(piece_move.to);
-
-        let is_capture = !self.board.get_piece_from_position(&piece_move.to).is_none();
-        let reset_half_moves = is_capture | (piece_kind == PieceKind::P);
-
-        // update king position
-        if piece_kind == PieceKind::K {
-            self.board
-                .king_positions
-                .insert(self.board.turn, piece_move.to);
-            if piece_move.from.x.abs_diff(piece_move.to.x) == 2 {
-                let (old_rook_position, new_rook_position) =
-                    get_rook_old_and_new_castling_positions(&piece_move.to);
-
-                let rook_to_move =
-                    match &mut self.board.board[old_rook_position.x][old_rook_position.y] {
-                        Some(rook_to_move) => rook_to_move,
-                        None => panic!("Oh no! There should be a piece at this position."),
-                    };
-
-                rook_to_move.move_piece(new_rook_position);
-                self.board
-                    .move_piece(&old_rook_position, &new_rook_position);
-            }
-            self.board.castling.insert(self.board.turn, [false, false]);
-        } else if (piece_kind == PieceKind::P) & ((piece_move.to.y == 0) | (piece_move.to.y == 7)) {
-            self.promotion_position = Some(piece_move.to);
-        }
-        let castling = self.board.castling[&self.board.turn];
-        if castling.into_iter().any(|x| x) {
-            let is_rook = piece_kind == PieceKind::R;
-            let new_castling = [
-                castling[0] & !((is_rook) & (piece_move.from.x == 0)),
-                castling[1] & !((is_rook) & (piece_move.from.x == 7)),
-            ];
-            if castling != new_castling {
-                self.board.castling.insert(self.board.turn, new_castling);
-            }
-        }
-        let opponent_castling = self.board.castling[&self.board.next_turn];
-        if opponent_castling.into_iter().any(|x| x) {
-            let opponent_row = if self.board.next_turn == Color::White {
-                0_usize
-            } else {
-                7_usize
-            };
-            let new_castling = [
-                opponent_castling[0] && !(piece_move.to.x == 0 && piece_move.to.y == opponent_row),
-                opponent_castling[1] && !(piece_move.to.x == 7 && piece_move.to.y == opponent_row),
-            ];
-            if opponent_castling != new_castling {
-                self.board
-                    .castling
-                    .insert(self.board.next_turn, new_castling);
-            }
-        }
-
-        if was_en_passant_played(&piece_kind, &piece_move.to, &self.board.en_passant) {
-            self.board
-                .remove_piece(&Position::new(piece_move.to.x, piece_move.from.y));
-        }
-
-        self.board.en_passant = get_en_passant(&piece_kind, &piece_move.from, &piece_move.to);
-        self.board.move_piece(&piece_move.from, &piece_move.to);
-        if reset_half_moves {
-            self.board.reset_half_move();
-        } else {
-            self.board.increase_half_move();
-        }
-        println!("{:?}", self.board.castling);
     }
 
     fn end_of_turn_ceremonies(&mut self) {

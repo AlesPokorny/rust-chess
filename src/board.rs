@@ -1,7 +1,7 @@
 use crate::helpers::{Move, Position};
-use crate::moves::is_field_in_check;
+use crate::moves::{get_rook_old_and_new_castling_positions, is_field_in_check};
 use crate::pieces::{Color, Piece, PieceKind};
-use crate::utils::chess_coord_to_position;
+use crate::utils::{chess_coord_to_position, get_en_passant, was_en_passant_played};
 
 use chrono::Local;
 use std::collections::HashMap;
@@ -15,6 +15,7 @@ pub struct Board {
     pub turn: Color,
     pub next_turn: Color,
     pub en_passant: Option<Position>,
+    pub promotion_position: Option<Position>,
     pub castling: HashMap<Color, [bool; 2]>,
     pub n_half_moves: u16,
     pub n_full_moves: u16,
@@ -58,6 +59,7 @@ impl Board {
             turn: Color::White,
             next_turn: Color::Black,
             en_passant: None,
+            promotion_position: None,
             castling: HashMap::from([(Color::White, [true, true]), (Color::Black, [true, true])]),
             n_half_moves: 0_u16,
             n_full_moves: 1_u16,
@@ -391,6 +393,7 @@ impl Board {
             turn,
             next_turn,
             en_passant,
+            promotion_position: None,
             castling,
             n_half_moves,
             n_full_moves,
@@ -437,18 +440,37 @@ impl Board {
         false
     }
 
-    pub fn count_points(&self) -> (i32, i32) {
+    pub fn count_points(&self) -> HashMap<Color, i32> {
         let all_pieces = self.get_pieces();
-        let white_points: i32 = all_pieces[0].iter().map(|piece| piece.points).sum();
-        let black_points: i32 = all_pieces[1].iter().map(|piece| piece.points).sum();
+        let mut results: HashMap<Color, i32> = HashMap::new();
+        if self.no_possible_moves() {
+            if self.is_king_in_check(&self.next_turn) {
+                results.insert(self.turn, 1000);
+                results.insert(self.next_turn, -1000);
+                return results;
+            } else {
+                results.insert(self.turn, 0);
+                results.insert(self.next_turn, 0);
+                return results;
+            }
+        }
 
-        (white_points, black_points)
+        results.insert(
+            Color::White,
+            all_pieces[0].iter().map(|piece| piece.points).sum(),
+        );
+        results.insert(
+            Color::Black,
+            all_pieces[1].iter().map(|piece| piece.points).sum(),
+        );
+
+        results
     }
 
-    pub fn try_move(&self, move_to_try: &Move) -> Board {
+    pub fn try_move(&self, move_to_try: Move) -> Board {
         let mut board = self.clone();
 
-        board.move_piece(&move_to_try.from, &move_to_try.to);
+        board.bust_a_move(move_to_try);
         board
     }
 
@@ -479,6 +501,81 @@ impl Board {
             is_draw = false
         }
         is_draw
+    }
+
+    pub fn bust_a_move(&mut self, piece_move: Move) {
+        let piece = self.get_piece_from_position(&piece_move.from).unwrap();
+        let piece_kind = piece.kind;
+
+        // can we make this bit better? use the self.chosen_piece as mutable reference
+        // so we dont have to dig it out again?
+        // only if I knew how...
+        let piece_to_move = match &mut self.board[piece_move.from.x][piece_move.from.y] {
+            Some(piece_to_move) => piece_to_move,
+            None => panic!("Oh no! There should be a piece at this position."),
+        };
+        piece_to_move.move_piece(piece_move.to);
+
+        let is_capture = !self.get_piece_from_position(&piece_move.to).is_none();
+        let reset_half_moves = is_capture | (piece_kind == PieceKind::P);
+
+        // update king position
+        if piece_kind == PieceKind::K {
+            self.king_positions.insert(self.turn, piece_move.to);
+            if piece_move.from.x.abs_diff(piece_move.to.x) == 2 {
+                let (old_rook_position, new_rook_position) =
+                    get_rook_old_and_new_castling_positions(&piece_move.to);
+
+                let rook_to_move = match &mut self.board[old_rook_position.x][old_rook_position.y] {
+                    Some(rook_to_move) => rook_to_move,
+                    None => panic!("Oh no! There should be a piece at this position."),
+                };
+
+                rook_to_move.move_piece(new_rook_position);
+                self.move_piece(&old_rook_position, &new_rook_position);
+            }
+            self.castling.insert(self.turn, [false, false]);
+        } else if (piece_kind == PieceKind::P) & ((piece_move.to.y == 0) | (piece_move.to.y == 7)) {
+            self.promotion_position = Some(piece_move.to);
+        }
+        let castling = self.castling[&self.turn];
+        if castling.into_iter().any(|x| x) {
+            let is_rook = piece_kind == PieceKind::R;
+            let new_castling = [
+                castling[0] & !((is_rook) & (piece_move.from.x == 0)),
+                castling[1] & !((is_rook) & (piece_move.from.x == 7)),
+            ];
+            if castling != new_castling {
+                self.castling.insert(self.turn, new_castling);
+            }
+        }
+        let opponent_castling = self.castling[&self.next_turn];
+        if opponent_castling.into_iter().any(|x| x) {
+            let opponent_row = if self.next_turn == Color::White {
+                0_usize
+            } else {
+                7_usize
+            };
+            let new_castling = [
+                opponent_castling[0] && !(piece_move.to.x == 0 && piece_move.to.y == opponent_row),
+                opponent_castling[1] && !(piece_move.to.x == 7 && piece_move.to.y == opponent_row),
+            ];
+            if opponent_castling != new_castling {
+                self.castling.insert(self.next_turn, new_castling);
+            }
+        }
+
+        if was_en_passant_played(&piece_kind, &piece_move.to, &self.en_passant) {
+            self.remove_piece(&Position::new(piece_move.to.x, piece_move.from.y));
+        }
+
+        self.en_passant = get_en_passant(&piece_kind, &piece_move.from, &piece_move.to);
+        self.move_piece(&piece_move.from, &piece_move.to);
+        if reset_half_moves {
+            self.reset_half_move();
+        } else {
+            self.increase_half_move();
+        }
     }
 }
 
