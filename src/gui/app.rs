@@ -104,7 +104,7 @@ impl<'a> App for ChessApp<'a> {
                                         self.end_of_turn_ceremonies();
                                     }
                                     // The ui is so damn fast that without sleep, it uses the same click multiple times
-                                    sleep(Duration::from_secs_f32(0.1 ));
+                                    sleep(Duration::from_secs_f32(0.1));
                                 } else {
                                     self.select_piece_and_update_moves(&click_position);
                                 }

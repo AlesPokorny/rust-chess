@@ -13,18 +13,21 @@ pub fn find_random_move(board: &Board) -> Move {
 
 pub fn find_best_point_move_depth_one(board: &Board) -> Move {
     let turn = board.turn;
-    let mut moves_with_points = board.get_all_moves_of_color(board.turn).into_iter().map(
-        |move_to_check| {
+    let mut moves_with_points = board
+        .get_all_moves_of_color(board.turn)
+        .into_iter()
+        .map(|move_to_check| {
             let points = board.try_move(&move_to_check).count_points();
             if turn == Color::White {
                 (move_to_check, points.0 - points.1)
             } else {
                 (move_to_check, points.1 - points.0)
             }
-        }
-    ).collect::<Vec<(Move, i32)>>();
+        })
+        .collect::<Vec<(Move, i32)>>();
     moves_with_points.sort_by_key(|item| -item.1);
-    let highest_points_moves: Vec<&(Move, i32)> = moves_with_points.iter()
+    let highest_points_moves: Vec<&(Move, i32)> = moves_with_points
+        .iter()
         .filter(|x| moves_with_points.first().unwrap().1 == x.1)
         .collect();
 
