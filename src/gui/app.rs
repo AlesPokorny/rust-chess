@@ -537,7 +537,7 @@ impl<'a> ChessApp<'a> {
             exit(0);
         }
 
-        if self.board.n_half_moves >= 100 {
+        if self.board.n_half_moves >= 100 || self.board.is_material_draw() {
             println!("Tis a draw");
             self.board.write_to_file();
             exit(0);

@@ -457,6 +457,23 @@ impl Board {
     pub fn is_king_in_check(&self, color: &Color) -> bool {
         is_field_in_check(self.king_positions[color], self)
     }
+
+    pub fn is_material_draw(&self) -> bool {
+        let all_pieces = self.get_pieces();
+        let mut is_draw = true;
+        let not_mating_pieces = [PieceKind::N, PieceKind::B];
+
+        if all_pieces[0].len() <= 2 && all_pieces[1].len() <= 2 {
+            for color_pieces in all_pieces {
+                is_draw &= color_pieces
+                    .into_iter()
+                    .any(|piece| not_mating_pieces.contains(&piece.kind));
+            }
+        } else {
+            is_draw = false
+        }
+        is_draw
+    }
 }
 
 #[cfg(test)]
