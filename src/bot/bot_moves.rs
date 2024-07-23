@@ -1,5 +1,6 @@
 use crate::board::Board;
 use crate::helpers::Move;
+use crate::pieces::Color;
 
 use rand::Rng;
 use std::time::Instant;
@@ -45,10 +46,22 @@ fn minmax(board: Board, depth: u8) -> i32 {
         })
         .collect();
 
+    if all_points.len() == 0 {
+        if board.is_king_in_check(&board.turn) {
+            if board.turn == Color::White {
+                return -1000;
+            } else {
+                return 1000;
+            }
+        } else {
+            return 0;
+        }
+    }
+
     if depth % 2 == 0 {
-        return *all_points.iter().min().unwrap_or(&0);
+        return *all_points.iter().min().unwrap();
     } else {
-        return *all_points.iter().max().unwrap_or(&0);
+        return *all_points.iter().max().unwrap();
     }
 }
 

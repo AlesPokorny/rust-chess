@@ -449,14 +449,19 @@ impl Board {
     }
 
     pub fn count_points(&self) -> i32 {
-        let all_pieces = self.get_pieces();
         if self.no_possible_moves() {
-            if self.is_king_in_check(&Color::White) {
-                return 1000;
+            if self.is_king_in_check(&self.turn) {
+                if self.turn == Color::White {
+                    return -1000;
+                } else {
+                    return 1000;
+                }
+
             } else {
                 return 0;
             }
         }
+        let all_pieces = self.get_pieces();
 
         all_pieces[0].iter().map(|piece| piece.points).sum::<i32>()
             - all_pieces[1].iter().map(|piece| piece.points).sum::<i32>()
