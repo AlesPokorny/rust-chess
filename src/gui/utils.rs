@@ -6,7 +6,7 @@ use eframe::egui::{
 };
 use eframe::epaint::FontFamily;
 
-use std::collections::HashMap;
+use fnv::FnvHashMap;
 
 pub fn make_square(rect: Rect, color: Color32, fill: bool) -> Shape {
     if fill {
@@ -16,8 +16,9 @@ pub fn make_square(rect: Rect, color: Color32, fill: bool) -> Shape {
     Shape::rect_stroke(rect, Rounding::ZERO, Stroke::new(3.0, color))
 }
 
-pub fn init_assets<'a>(size: f32) -> HashMap<(PieceKind, Color), Image<'a>> {
-    let mut assets: HashMap<(PieceKind, Color), Image> = HashMap::new();
+pub fn init_assets<'a>(size: f32) -> FnvHashMap<(PieceKind, Color), Image<'a>> {
+    let mut assets: FnvHashMap<(PieceKind, Color), Image> =
+        FnvHashMap::with_capacity_and_hasher(12, Default::default());
 
     assets.insert(
         (PieceKind::K, Color::White),

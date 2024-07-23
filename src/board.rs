@@ -4,19 +4,21 @@ use crate::pieces::{Color, Piece, PieceKind};
 use crate::utils::{chess_coord_to_position, get_en_passant, was_en_passant_played};
 
 use chrono::Local;
-use std::collections::HashMap;
+use eframe::egui::ahash::HashMapExt;
+use fnv::FnvHashMap;
 use std::fs;
 use std::io::Error;
+use std::mem::swap;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Board {
     pub board: [[Option<Piece>; 8]; 8],
-    pub king_positions: HashMap<Color, Position>,
+    pub king_positions: FnvHashMap<Color, Position>,
     pub turn: Color,
     pub next_turn: Color,
     pub en_passant: Option<Position>,
     pub promotion_position: Option<Position>,
-    pub castling: HashMap<Color, [bool; 2]>,
+    pub castling: FnvHashMap<Color, [bool; 2]>,
     pub n_half_moves: u16,
     pub n_full_moves: u16,
     pub history: Vec<String>,
@@ -35,6 +37,20 @@ impl Board {
             ['r', 'n', 'b', 'k', 'q', 'b', 'n', 'r'],
         ];
 
+        let mut king_positions = FnvHashMap::with_capacity_and_hasher(2, Default::default());
+        king_positions.insert(
+            Color::White,
+            chess_coord_to_position(String::from("e1")).unwrap(),
+        );
+        king_positions.insert(
+            Color::Black,
+            chess_coord_to_position(String::from("e8")).unwrap(),
+        );
+
+        let mut castling = FnvHashMap::with_capacity_and_hasher(2, Default::default());
+        castling.insert(Color::White, [true, true]);
+        castling.insert(Color::Black, [true, true]);
+
         let mut result_board: Board = Board {
             board: [
                 [None, None, None, None, None, None, None, None],
@@ -46,21 +62,12 @@ impl Board {
                 [None, None, None, None, None, None, None, None],
                 [None, None, None, None, None, None, None, None],
             ],
-            king_positions: HashMap::from([
-                (
-                    Color::White,
-                    chess_coord_to_position(String::from("e1")).unwrap(),
-                ),
-                (
-                    Color::Black,
-                    chess_coord_to_position(String::from("e8")).unwrap(),
-                ),
-            ]),
+            king_positions,
             turn: Color::White,
             next_turn: Color::Black,
             en_passant: None,
             promotion_position: None,
-            castling: HashMap::from([(Color::White, [true, true]), (Color::Black, [true, true])]),
+            castling,
             n_half_moves: 0_u16,
             n_full_moves: 1_u16,
             history: vec!["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_owned()],
@@ -309,7 +316,7 @@ impl Board {
             [None, None, None, None, None, None, None, None],
         ];
 
-        let mut king_positions: HashMap<Color, Position> = HashMap::new();
+        let mut king_positions: FnvHashMap<Color, Position> = FnvHashMap::new();
 
         for (y, row) in board_pieces.iter().enumerate() {
             let mut x: usize = 0;
@@ -349,11 +356,11 @@ impl Board {
         };
 
         let castling_str = fen_parts[2];
-        let castling: HashMap<Color, [bool; 2]> = if castling_str == "-" {
-            HashMap::from([
-                (Color::White, [false, false]),
-                (Color::Black, [false, false]),
-            ])
+        let mut castling: FnvHashMap<Color, [bool; 2]> =
+            FnvHashMap::with_capacity_and_hasher(2, Default::default());
+        if castling_str == "-" {
+            castling.insert(Color::White, [false, false]);
+            castling.insert(Color::Black, [false, false]);
         } else {
             let mut white = [false, false];
             let mut black = [false, false];
@@ -373,8 +380,9 @@ impl Board {
                     white[i] = true;
                 };
             }
-            HashMap::from([(Color::White, white), (Color::Black, black)])
-        };
+            castling.insert(Color::White, white);
+            castling.insert(Color::Black, black);
+        }
 
         // TODO: castling
         let en_passant = chess_coord_to_position(String::from(fen_parts[3]));
@@ -440,38 +448,36 @@ impl Board {
         false
     }
 
-    pub fn count_points(&self) -> HashMap<Color, i32> {
+    pub fn count_points(&self) -> i32 {
         let all_pieces = self.get_pieces();
-        let mut results: HashMap<Color, i32> = HashMap::new();
         if self.no_possible_moves() {
-            if self.is_king_in_check(&self.next_turn) {
-                results.insert(self.turn, 1000);
-                results.insert(self.next_turn, -1000);
-                return results;
+            if self.is_king_in_check(&Color::White) {
+                return 1000;
             } else {
-                results.insert(self.turn, 0);
-                results.insert(self.next_turn, 0);
-                return results;
+                return 0;
             }
         }
 
-        results.insert(
-            Color::White,
-            all_pieces[0].iter().map(|piece| piece.points).sum(),
-        );
-        results.insert(
-            Color::Black,
-            all_pieces[1].iter().map(|piece| piece.points).sum(),
-        );
-
-        results
+        all_pieces[0].iter().map(|piece| piece.points).sum::<i32>()
+            - all_pieces[1].iter().map(|piece| piece.points).sum::<i32>()
     }
 
     pub fn try_move(&self, move_to_try: Move) -> Board {
         let mut board = self.clone();
 
         board.bust_a_move(move_to_try);
+        board.set_values_at_the_end(false);
         board
+    }
+
+    pub fn set_values_at_the_end(&mut self, save_history: bool) {
+        if self.turn == Color::Black {
+            self.increase_full_move()
+        }
+        swap(&mut self.turn, &mut self.next_turn);
+        if save_history {
+            self.history.push(self.to_fen());
+        }
     }
 
     pub fn write_to_file(&self) {

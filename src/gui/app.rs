@@ -1,5 +1,5 @@
 use crate::board::Board;
-use crate::bot::find_best_point_move_depth_one;
+use crate::bot::get_bot_move;
 use crate::gui::utils::*;
 use crate::helpers::{Move, Position};
 use crate::pieces::{Color, Piece, PieceKind};
@@ -9,14 +9,11 @@ use eframe::egui::{
     Shape, Ui, Vec2,
 };
 use eframe::{self, App, Frame};
-use std::collections::HashMap;
-use std::mem::swap;
+use fnv::FnvHashMap;
 use std::process::exit;
-use std::thread::sleep;
-use std::time::Duration;
 
 pub struct ChessApp<'a> {
-    piece_images: HashMap<(PieceKind, Color), Image<'a>>,
+    piece_images: FnvHashMap<(PieceKind, Color), Image<'a>>,
     board: Board,
     window_size: f32,
     square_size: f32,
@@ -84,7 +81,6 @@ impl<'a> App for ChessApp<'a> {
 
                 if self.player_color == self.board.turn {
                     if let Some(promotion_position) = self.board.promotion_position {
-                        println!("how did I get here?");
                         self.do_promotion_stuff(promotion_position, ui, ctx);
                     } else if let Some(pos) = ctx.input(|i| i.pointer.press_origin()) {
                         let click_position = convert_click_to_board_position(
@@ -92,6 +88,7 @@ impl<'a> App for ChessApp<'a> {
                             self.player_color,
                             self.square_size,
                         );
+                        println!("{:?}", click_position);
                         match self.chosen_piece {
                             Some(piece) => {
                                 if self.possible_moves.contains(&click_position) {
@@ -100,8 +97,8 @@ impl<'a> App for ChessApp<'a> {
                                     if self.board.promotion_position.is_none() {
                                         self.end_of_turn_ceremonies();
                                     }
-                                    // The ui is so damn fast that without sleep, it uses the same click multiple times
-                                    sleep(Duration::from_secs_f32(0.3));
+                                    // // The ui is so damn fast that without sleep, it uses the same click multiple times
+                                    // sleep(Duration::from_secs_f32(0.3));
                                 } else {
                                     self.select_piece_and_update_moves(&click_position);
                                 }
@@ -112,7 +109,7 @@ impl<'a> App for ChessApp<'a> {
                         }
                     }
                 } else {
-                    let bot_move = find_best_point_move_depth_one(&self.board);
+                    let bot_move = get_bot_move(&self.board);
                     self.board.bust_a_move(bot_move);
                     if self.board.promotion_position.is_some() {
                         let new_piece =
@@ -396,15 +393,8 @@ impl<'a> ChessApp<'a> {
 
     fn set_values_at_the_end_of_turn(&mut self) {
         self.chosen_piece = None;
-
-        if self.board.turn == Color::Black {
-            self.board.increase_full_move()
-        }
-
-        swap(&mut self.board.turn, &mut self.board.next_turn);
-
+        self.board.set_values_at_the_end(true);
         self.possible_moves = Vec::new();
-        self.board.history.push(self.board.to_fen());
     }
 
     fn do_promotion_stuff(&mut self, promotion_position: Position, ui: &mut Ui, ctx: &Context) {
