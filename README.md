@@ -2,6 +2,9 @@
 ## TODO
  - run chess calculation tests to see if there are any bugs (https://www.chessprogramming.org/Perft_Results)
  - improve bots
+  - deal with promotions
+  - first X moves from database
+  - alfa-beta pruning
  - checks
     - en passant capture checks
  - Game clock
