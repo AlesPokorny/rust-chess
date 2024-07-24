@@ -88,7 +88,6 @@ impl<'a> App for ChessApp<'a> {
                             self.player_color,
                             self.square_size,
                         );
-                        println!("{:?}", click_position);
                         match self.chosen_piece {
                             Some(piece) => {
                                 if self.possible_moves.contains(&click_position) {

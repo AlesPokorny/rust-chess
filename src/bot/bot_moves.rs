@@ -4,6 +4,7 @@ use crate::pieces::Color;
 
 use rand::Rng;
 use std::time::Instant;
+use rayon::prelude::*;
 
 pub fn find_random_move(board: &Board) -> Move {
     let all_moves = board.get_all_moves_of_color(board.turn);
@@ -38,7 +39,7 @@ fn minmax(board: Board, depth: u8) -> i32 {
         .into_iter()
         .map(|move_to_try| {
             let new_board = board.try_move(move_to_try);
-            if depth + 1 < 2 {
+            if depth + 1 < 4 {
                 minmax(new_board, depth + 1)
             } else {
                 new_board.count_points()
@@ -70,7 +71,7 @@ pub fn get_bot_move(board: &Board) -> Move {
     let all_moves = board.get_all_moves_of_color(board.turn);
 
     let mut move_points: Vec<(usize, i32)> = all_moves
-        .iter()
+        .par_iter()
         .enumerate()
         .map(|(n, possible_move)| (n, minmax(board.try_move(*possible_move), 1)))
         .collect();

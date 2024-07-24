@@ -2635,6 +2635,7 @@ dependencies = [
  "fnv",
  "image",
  "rand",
+ "rayon",
 ]
 
 [[package]]
