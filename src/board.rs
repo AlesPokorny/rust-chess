@@ -456,7 +456,6 @@ impl Board {
                 } else {
                     return 1000;
                 }
-
             } else {
                 return 0;
             }
