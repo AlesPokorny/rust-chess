@@ -1,5 +1,5 @@
 use crate::board::Board;
-use crate::bot::get_bot_move;
+use crate::bot::ChessBot;
 use crate::gui::utils::*;
 use crate::helpers::{Move, Position};
 use crate::pieces::{Color, Piece, PieceKind};
@@ -28,6 +28,7 @@ pub struct ChessApp<'a> {
     black_color: [f32; 3],
     colors: [[f32; 3]; 2],
     player_color: Color,
+    chess_bot: ChessBot,
 }
 
 impl<'a> Default for ChessApp<'a> {
@@ -51,6 +52,7 @@ impl<'a> Default for ChessApp<'a> {
             black_color: [165., 82., 42.],
             colors: [[255., 228., 196.], [165., 82., 42.]],
             player_color: Color::White,
+            chess_bot: ChessBot::new(Color::Black, 4),
         }
     }
 }
@@ -108,7 +110,7 @@ impl<'a> App for ChessApp<'a> {
                         }
                     }
                 } else {
-                    let bot_move = get_bot_move(&self.board);
+                    let bot_move = self.chess_bot.get_bot_move(&self.board);
                     self.board.bust_a_move(bot_move);
                     if self.board.promotion_position.is_some() {
                         let new_piece =
@@ -457,5 +459,6 @@ impl<'a> ChessApp<'a> {
             self.board.write_to_file();
             exit(0);
         }
+        println!("{}", self.board.to_fen());
     }
 }
